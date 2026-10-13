@@ -1023,7 +1023,8 @@ pre.code {
     if (!all(dev, 'network/logical-router/entry').length) {
       const l3 = all(dev, 'network/interface/ethernet/entry').filter(e => kid(e, 'layer3')).length
         + all(dev, 'network/interface/aggregate-ethernet/entry').filter(e => kid(e, 'layer3')).length;
-      if (l3) R.add('manual', area, 'La config non ha nessun router: ' + l3 + (l3 === 1 ? ' interfaccia layer 3 non è associata' : ' interfacce layer 3 non sono associate') + ' a un logical router e non ci sono route. Se il routing è in un\'altra config, convertila insieme a questa; altrimenti crea il logical router sul PA-500.');
+      const tun = all(dev, 'network/tunnel/ipsec/entry').length;
+      if (l3) R.add('check', area, 'La config non ha nessun router: ' + l3 + (l3 === 1 ? ' interfaccia layer 3 non è associata' : ' interfacce layer 3 non sono associate') + ' a un logical router e non ci sono route' + (tun ? ', quindi anche i ' + tun + ' tunnel IPsec non possono instradare traffico' : '') + '. Va bene solo se il firewall non deve fare routing (per esempio in virtual wire); altrimenti il routing manca da questo export.');
     }
 
     const setting = ensure(dev, 'deviceconfig/setting');

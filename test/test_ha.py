@@ -25,7 +25,12 @@ JS = """
 # path monitoring HA con virtual router (legacy) e uno vuoto
 SRC_PATHMON = SRC.replace('<monitoring>', '<monitoring><path-monitoring><enabled>yes</enabled><path-group><virtual-router><entry name="default"><enabled>yes</enabled><destination-ip><entry name="gw"><enabled>yes</enabled></entry></destination-ip></entry></virtual-router></path-group></path-monitoring>', 1)
 
+# struttura di un PA-550 già in produzione: deve passare senza errori e senza toccare l'HA
+PA550 = (HERE / 'pa550-funzionante.xml').read_text()
+
 CASES = [
+    ('config di un PA-550 funzionante', PA550, None, {}, {},
+     lambda r: not any(i.startswith('error') for i in r['items']) and '<port>management</port>' in r['xml'] and r['xml'].count('<ip-address>') == 2),
     ('path group HA convertito', SRC_PATHMON, None, {'ha1-a': 'management', 'ha1-b': 'ethernet1/11', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
      lambda r: any('logical-router' in i for i in r['items']) and not any(i.startswith('error') for i in r['items'])),
     ('entrambe su management', SRC, None, {'ha1-a': 'management', 'ha1-b': 'management', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
