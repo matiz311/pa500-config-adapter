@@ -196,10 +196,10 @@
     const fp = $('#faceplate');
     fp.replaceChildren();
     const mgmtHa = (S.result && S.result.mgmtHa) || [];
-    const mgmtLabel = 'Porta di management' + (mgmtHa.length ? ', usata anche da ' + mgmtHa.join(' e ') : '');
+    const mgmtLabel = 'Porta di management' + (mgmtHa.length ? ', usata anche da ' + mgmtHa.join(' e ') : '') + (mgmtHa.length > 1 ? ': un solo link HA può usarla' : '');
     fp.append(h('div', { class: 'fp-brand' },
       h('span', { class: 'fp-model' }, m.id),
-      h('span', { class: 'fp-mgmt' }, h('span', { class: 'sock-mini' + (mgmtHa.length ? ' is-ha' : ''), title: mgmtLabel, role: 'img', 'aria-label': mgmtLabel }), 'MGT')));
+      h('span', { class: 'fp-mgmt' }, h('span', { class: 'sock-mini' + (mgmtHa.length > 1 ? ' is-err' : mgmtHa.length ? ' is-ha' : ''), title: mgmtLabel, role: 'img', 'aria-label': mgmtLabel }), 'MGT')));
     const use = portUse();
     const selPort = S.sel ? S.map[S.sel] : null;
     for (const g of m.groups) {
@@ -276,14 +276,40 @@
       }
     }
     if (it.kind !== 'ha-dedicated') sel.append(h('option', { value: E.DROP }, 'Escludi'));
+    else if (onlyBackups(it)) sel.append(h('option', { value: E.DROP }, 'Nessuna (togli il backup)'));
     const val = v || (it.kind === 'ae' ? it.key : '');
     if (val && ![...sel.options].some(o => o.value === val)) sel.insertBefore(h('option', { value: val }, val + ' (non esiste)'), sel.options[it.kind === 'ae' ? 0 : 1]);
     sel.value = val;
     return sel;
   }
+  const onlyBackups = it => it.ha.length > 0 && it.ha.every(s => s === 'ha1-backup' || s === 'ha2-backup');
+  /** Porta finale di ogni link HA della sorgente secondo la mappatura corrente. */
+  function haLinks() {
+    if (!S.src || !S.src.doc || keepHA() || !S.rules.ha) return [];
+    const out = [];
+    for (const [sec, port] of S.src.info.devices[0].haPorts) {
+      let f = port;
+      if (port !== E.MGMT) {
+        const v = S.map[port];
+        if (v === E.DROP) continue;
+        if (v) f = v;
+        else if (srcInv().some(i => i.key === port && i.kind === 'ha-dedicated')) f = '';
+      }
+      out.push({ sec, port: f });
+    }
+    return out;
+  }
   function rowStatus(it, v, m) {
     if (replacedByTarget(it)) return { cls: 'off', text: 'Sostituita' };
-    if (v === E.DROP) return { cls: 'off', text: 'Esclusa' };
+    if (v === E.DROP) {
+      if (it.ha.length && !onlyBackups(it)) return { cls: 'err', text: 'Serve a ' + it.ha.join(', ') };
+      return { cls: 'off', text: it.ha.length ? 'Backup tolto' : 'Esclusa' };
+    }
+    if (it.ha.length) {
+      const mine = it.kind === 'ha-dedicated' ? v : (v || it.key);
+      const clash = haLinks().filter(l => !it.ha.includes(l.sec) && l.port && l.port === mine);
+      if (mine && clash.length) return { cls: 'err', text: 'Stessa porta di ' + clash.map(c => c.sec).join(', ') };
+    }
     if (it.kind === 'ha-dedicated') {
       if (!v) return { cls: 'err', text: 'Da assegnare' };
       if (v === E.MGMT) return { cls: 'ok', text: 'Management' };

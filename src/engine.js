@@ -1046,7 +1046,7 @@
     const els = doc.documentElement.getElementsByTagName('*');
     for (let i = 0; i < els.length; i++) {
       const el = els[i];
-      if (!el.firstElementChild && re.test(el.textContent.trim())) left.push(el);
+      if (!el.firstElementChild && re.test(el.textContent.trim()) && !isHaPort(el)) left.push(el);
     }
     for (const el of left) R.add('error', area, 'Riferimento a un\'interfaccia esclusa in ' + humanPath(el) + ' (`' + el.textContent.trim() + '`): correggilo o assegna una porta invece di escluderla.', { xpath: xpathOf(el) });
     void dev;
@@ -1073,13 +1073,26 @@
     const ha = at(dev, 'deviceconfig/high-availability');
     if (!ha) return;
     const used = new Set();
+    const dropped = new Set(ctx.drop || []);
     for (const s of HA_SECTIONS) {
       const portEl = at(ha, 'interface/' + s + '/port');
       if (!portEl) continue;
       const p = portEl.textContent.trim();
       if (!p) continue;
+      if (dropped.has(p)) {
+        if (s === 'ha1-backup' || s === 'ha2-backup') {
+          detach(at(ha, 'interface/' + s));
+          R.add('done', area, 'Tolto `' + s + '`: la sua porta `' + p + '` è stata esclusa nella tabella delle porte.');
+        } else {
+          R.add('error', area, '`' + s + '` usa la porta `' + p + '`, che hai escluso: assegnale una porta del PA-500.');
+        }
+        continue;
+      }
       if (p === MGMT) {
-        if (s === 'ha1' || s === 'ha1-backup') continue;
+        if (s === 'ha1' || s === 'ha1-backup') {
+          mgmtHaSection(ctx, ha, s);
+          continue;
+        }
         R.add('error', area, '`' + s + '` non può usare la porta di management.');
         continue;
       }
@@ -1095,6 +1108,85 @@
       if (kid(e, 'ha') && !used.has(nameOf(e))) {
         detach(e);
         R.add('done', area, '`' + nameOf(e) + '` era in modalità HA ma non è usata dalla configurazione HA finale: rimossa.');
+      }
+    }
+  }
+
+  /** HA1 o HA1 backup sulla management: niente IP propri, peer e Permitted IP da controllare. */
+  function mgmtHaSection(ctx, ha, s) {
+    const { dev, R } = ctx;
+    const sec = at(ha, 'interface/' + s);
+    const removed = [];
+    for (const t of ['ip-address', 'netmask', 'gateway', 'link-speed', 'link-duplex']) {
+      const e = kid(sec, t);
+      if (e) { removed.push(t + (e.textContent.trim() ? ' ' + e.textContent.trim() : '')); detach(e); }
+    }
+    if (!removed.length) return;
+    R.add('done', 'HA', '`' + s + '` usa la porta di management: tolti ' + removed.join(', ') + '. Sulla management PAN-OS usa l\'indirizzo dell\'interfaccia di management e rifiuta il commit se la sezione HA ne ha uno proprio.');
+    const peerTag = s === 'ha1' ? 'peer-ip' : 'peer-ip-backup';
+    const peer = at(ha, 'group/' + peerTag);
+    if (peer && peer.textContent.trim()) {
+      R.add('check', 'HA', '`' + s + '` è passato su management: in `group/' + peerTag + '` va l\'IP di management del peer, ora c\'è `' + peer.textContent.trim() + '` (l\'indirizzo del vecchio link dedicato).', { xpath: xpathOf(peer) });
+    }
+    if (all(dev, 'deviceconfig/system/permitted-ip/entry').length) {
+      R.add('check', 'HA', 'La management ha una lista di Permitted IP: aggiungi l\'IP del peer usato da `' + s + '`, altrimenti il link HA non si stabilisce.');
+    }
+  }
+
+  function isHaPort(el) {
+    const sec = el.parentNode, itf = sec && sec.parentNode, ha = itf && itf.parentNode;
+    return el.tagName === 'port' && !!ha && itf.tagName === 'interface' && ha.tagName === 'high-availability';
+  }
+
+  function ipv4(s) {
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec((s || '').trim());
+    if (!m || m.slice(1).some(o => +o > 255)) return null;
+    return ((+m[1] << 24) >>> 0) + (+m[2] << 16) + (+m[3] << 8) + (+m[4]);
+  }
+  function maskLen(mask, ipField) {
+    const cidr = /\/(\d{1,2})$/.exec(ipField || '');
+    if (cidr) return +cidr[1];
+    const n = ipv4(mask);
+    if (n == null) return null;
+    let len = 0;
+    for (let b = 31; b >= 0 && ((n >>> b) & 1); b--) len++;
+    return len;
+  }
+  function sameNet(a, b) {
+    const len = Math.min(a.len, b.len);
+    if (len === 0) return true;
+    const m = len === 32 ? 0xFFFFFFFF : ((0xFFFFFFFF << (32 - len)) >>> 0);
+    return ((a.ip & m) >>> 0) === ((b.ip & m) >>> 0);
+  }
+
+  /** Controlli sulla configurazione HA finale: porte e subnet dei link non devono sovrapporsi. */
+  function haChecks(ctx) {
+    const { dev, R } = ctx;
+    const ha = at(dev, 'deviceconfig/high-availability');
+    if (!ha) return;
+    const links = [];
+    for (const s of HA_SECTIONS) {
+      const sec = at(ha, 'interface/' + s);
+      const port = txt(sec, 'port');
+      if (!sec || !port) continue;
+      let ipField = txt(sec, 'ip-address'), mask = txt(sec, 'netmask'), ipEl = kid(sec, 'ip-address');
+      if (port === MGMT) {
+        ipField = txt(dev, 'deviceconfig/system/ip-address');
+        mask = txt(dev, 'deviceconfig/system/netmask');
+        ipEl = at(dev, 'deviceconfig/system/ip-address');
+      }
+      const ip = ipv4((ipField || '').replace(/\/\d+$/, ''));
+      const len = maskLen(mask, ipField);
+      links.push({ s, port, sec, ipEl, net: ip != null && len != null ? { ip, len, text: (ipField || '').replace(/\/\d+$/, '') + '/' + len } : null });
+    }
+    for (let i = 0; i < links.length; i++) {
+      for (let j = i + 1; j < links.length; j++) {
+        const a = links[i], b = links[j];
+        if (a.port === b.port) {
+          R.add('error', 'HA', '`' + a.s + '` e `' + b.s + '` usano la stessa porta `' + a.port + '`: ogni link HA, backup compresi, deve stare su una porta fisica diversa. Assegna un\'altra porta a `' + b.s + '` oppure toglilo (opzione «Nessuna» nella tabella delle porte). Al commit PAN-OS risponde «ports overlap».', { xpath: xpathOf(kid(b.sec, 'port')) });
+        } else if (a.net && b.net && sameNet(a.net, b.net)) {
+          R.add('error', 'HA', 'Gli indirizzi di `' + a.s + '` (' + a.net.text + (a.port === MGMT ? ', IP di management' : '') + ') e di `' + b.s + '` (' + b.net.text + (b.port === MGMT ? ', IP di management' : '') + ') sono nella stessa subnet: i link primari e di backup devono stare su subnet diverse. Cambia l\'IP di `' + (b.port === MGMT ? a.s : b.s) + '`.', { xpath: xpathOf(b.port === MGMT ? a.ipEl || a.sec : b.ipEl || b.sec) });
+        }
       }
     }
   }
@@ -1429,6 +1521,7 @@
     }
     if (tgtDoc && opts.rules.keepAdmins && ctxs.length) ruleKeepAdmins(ctxs[0]);
     const ruleHits = applyCustomRules(doc, opts.customRules, R);
+    for (const ctx of ctxs) if (opts.rules.ha) haChecks(ctx);
     if (ctxs.length) finalScan(ctxs[0]);
 
     // stato delle porte per il pannello

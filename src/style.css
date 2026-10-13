@@ -220,6 +220,7 @@ input.mono { font-family: var(--mono); font-size: 13px; }
 }
 .fp-mgmt .sock-mini::before { content: ""; }
 .fp-mgmt .sock-mini.is-ha::before { background: #E0A040; }
+.fp-mgmt .sock-mini.is-err::before { background: #F2867E; }
 .port .sock::after, .fp-mgmt .sock-mini::after {
   content: ""; position: absolute; inset: 2px;
   background: var(--socket);

@@ -29,7 +29,7 @@ Le regole personalizzate restano salvate nel browser e si possono esportare e im
 | BGP | Impostazioni globali, peer group, peer, autenticazione, timer (in timer profile), aggregati semplici, redistribuzione semplice e prefissi annunciati. A ogni peer group IPv4 applica un address family profile con IPv4 unicast attivo. |
 | OSPF | Aree normal, stub e NSSA, range, interfacce, link type, virtual link, autenticazione, timer (in interface timer profile), export rule semplici. |
 | Porte | Rinomina in tutta la config, sub-interfacce comprese; scambio di porte; esclusione con rimozione dei riferimenti; segnala i riferimenti che restano. |
-| HA | Porte HA dedicate (`ha1-a`, `hsci`, …) → porte dati in modalità HA o management; in alternativa usa l'HA già configurato sul PA-500. |
+| HA | Porte HA dedicate (`ha1-a`, `hsci`, …) → porte dati in modalità HA o management. Sulla management toglie IP, maschera e gateway della sezione HA, che PAN-OS non accetta. Segnala link HA sulla stessa porta o nella stessa subnet e il `peer-ip` da aggiornare. In alternativa usa l'HA già configurato sul PA-500. |
 | Piattaforma | Porte inesistenti sul modello, velocità non supportate, aggregate su porte di tipo diverso, PoE, interfacce cellulari, multi-vsys, gestione da Panorama, versione della sorgente, residui del motore legacy. |
 
 Policy BGP, route map e filtri complessi, OSPFv3, RIP e multicast non vengono convertiti: il report li riporta con l'XML originale, da ricreare a mano.
@@ -60,6 +60,7 @@ pip install playwright pyyaml
 python3 -m playwright install chromium
 python3 test/test_engine.py           # conversioni e validazione contro lo schema ARE
 python3 test/test_engine2.py          # regole personalizzate, errori di commit, casi limite
+python3 test/test_ha.py               # link HA: porte condivise, management, backup, subnet
 python3 test/test_ui.py               # percorso completo nella pagina, mobile e tema scuro
 python3 test/perf.py                  # tempi su una config sintetica da circa 6 MB
 ```
