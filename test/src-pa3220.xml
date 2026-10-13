@@ -1,0 +1,277 @@
+<?xml version="1.0"?>
+<config version="11.1.0" urldb="paloaltonetworks" detail-version="11.1.4">
+  <mgt-config>
+    <users>
+      <entry name="admin"><phash>$5$oldhash</phash><permissions><role-based><superuser>yes</superuser></role-based></permissions></entry>
+    </users>
+  </mgt-config>
+  <shared>
+    <address>
+      <entry name="srv-web"><ip-netmask>10.10.10.10/32</ip-netmask></entry>
+    </address>
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <deviceconfig>
+        <system>
+          <hostname>fw-old-a</hostname>
+          <ip-address>192.168.1.1</ip-address>
+          <netmask>255.255.255.0</netmask>
+          <default-gateway>192.168.1.254</default-gateway>
+          <type><static/></type>
+          <dns-setting><servers><primary>8.8.8.8</primary></servers></dns-setting>
+          <timezone>Europe/Rome</timezone>
+          <route>
+            <service>
+              <entry name="syslog"><source><interface>ethernet1/21</interface><address>172.16.9.1/24</address></source></entry>
+            </service>
+          </route>
+        </system>
+        <setting>
+          <config><rematch>yes</rematch></config>
+        </setting>
+        <high-availability>
+          <enabled>yes</enabled>
+          <group>
+            <group-id>10</group-id>
+            <peer-ip>10.255.255.2</peer-ip>
+            <mode><active-passive/></mode>
+            <monitoring>
+              <link-monitoring>
+                <link-group>
+                  <entry name="uplinks"><interface><member>ethernet1/1</member><member>ae1</member></interface></entry>
+                </link-group>
+              </link-monitoring>
+            </monitoring>
+          </group>
+          <interface>
+            <ha1><port>ha1-a</port><ip-address>10.255.255.1</ip-address><netmask>255.255.255.252</netmask></ha1>
+            <ha1-backup><port>ha1-b</port><ip-address>10.255.254.1</ip-address><netmask>255.255.255.252</netmask></ha1-backup>
+            <ha2><port>ethernet1/8</port></ha2>
+          </interface>
+        </high-availability>
+      </deviceconfig>
+      <network>
+        <profiles>
+          <bfd-profile>
+            <entry name="fast"><min-tx-interval>300</min-tx-interval><min-rx-interval>300</min-rx-interval><detection-multiplier>3</detection-multiplier></entry>
+          </bfd-profile>
+        </profiles>
+        <interface>
+          <ethernet>
+            <entry name="ethernet1/1"><layer3><ip><entry name="203.0.113.2/29"/></ip></layer3><comment>WAN</comment></entry>
+            <entry name="ethernet1/2">
+              <layer3>
+                <units>
+                  <entry name="ethernet1/2.10"><ip><entry name="10.0.10.1/24"/></ip><tag>10</tag></entry>
+                  <entry name="ethernet1/2.20"><ip><entry name="10.0.20.1/24"/></ip><tag>20</tag></entry>
+                </units>
+              </layer3>
+            </entry>
+            <entry name="ethernet1/3"><aggregate-group>ae1</aggregate-group></entry>
+            <entry name="ethernet1/4"><aggregate-group>ae1</aggregate-group></entry>
+            <entry name="ethernet1/5"><layer3><ip><entry name="10.0.50.1/24"/></ip></layer3><poe><poe-enabled>yes</poe-enabled></poe></entry>
+            <entry name="ethernet1/8"><ha/></entry>
+            <entry name="ethernet1/20"><layer3><ip><entry name="10.0.30.1/24"/></ip></layer3><link-speed>10000</link-speed></entry>
+            <entry name="ethernet1/21"><layer3><ip><entry name="172.16.9.1/24"/></ip></layer3></entry>
+          </ethernet>
+          <aggregate-ethernet>
+            <entry name="ae1">
+              <layer3>
+                <lacp><enable>yes</enable></lacp>
+                <units>
+                  <entry name="ae1.100"><ip><entry name="10.1.0.1/24"/></ip><tag>100</tag></entry>
+                </units>
+              </layer3>
+            </entry>
+          </aggregate-ethernet>
+          <tunnel>
+            <units><entry name="tunnel.1"><ip><entry name="169.254.1.1/30"/></ip></entry></units>
+          </tunnel>
+        </interface>
+        <dhcp>
+          <interface>
+            <entry name="ethernet1/2.10"><server><mode>auto</mode></server></entry>
+            <entry name="ethernet1/21"><server><mode>auto</mode></server></entry>
+          </interface>
+        </dhcp>
+        <virtual-router>
+          <entry name="default">
+            <interface>
+              <member>ethernet1/1</member>
+              <member>ethernet1/2.10</member>
+              <member>ethernet1/2.20</member>
+              <member>ae1.100</member>
+              <member>ethernet1/5</member>
+              <member>ethernet1/20</member>
+              <member>ethernet1/21</member>
+              <member>tunnel.1</member>
+            </interface>
+            <admin-dists><static>15</static><ebgp>25</ebgp></admin-dists>
+            <ecmp><enable>yes</enable><max-path>2</max-path><algorithm><ip-hash><use-port>yes</use-port></ip-hash></algorithm></ecmp>
+            <routing-table>
+              <ip>
+                <static-route>
+                  <entry name="default">
+                    <nexthop><ip-address>203.0.113.1</ip-address></nexthop>
+                    <bfd><profile>fast</profile></bfd>
+                    <interface>ethernet1/1</interface>
+                    <metric>10</metric>
+                    <destination>0.0.0.0/0</destination>
+                    <route-table><unicast/></route-table>
+                    <path-monitor>
+                      <enable>yes</enable><failure-condition>any</failure-condition><hold-time>2</hold-time>
+                      <monitor-destinations><entry name="gw"><enable>yes</enable><source>203.0.113.2/29</source><destination>203.0.113.1</destination><interval>3</interval><count>5</count></entry></monitor-destinations>
+                    </path-monitor>
+                  </entry>
+                  <entry name="to-vr2"><nexthop><next-vr>vr2</next-vr></nexthop><destination>172.31.0.0/16</destination></entry>
+                  <entry name="blackhole"><nexthop><discard/></nexthop><destination>192.168.0.0/16</destination><route-table><unicast/></route-table></entry>
+                  <entry name="fqdn-gw"><nexthop><fqdn>gw.example.net</fqdn></nexthop><destination>198.51.100.0/24</destination><interface>ethernet1/1</interface></entry>
+                  <entry name="recv"><nexthop><receive/></nexthop><destination>10.99.0.1/32</destination></entry>
+                  <entry name="noinst"><nexthop><ip-address>10.0.10.254</ip-address></nexthop><destination>10.98.0.0/16</destination><route-table><no-install/></route-table></entry>
+                  <entry name="both"><nexthop><ip-address>10.0.20.254</ip-address></nexthop><destination>10.97.0.0/16</destination><route-table><both/></route-table></entry>
+                </static-route>
+              </ip>
+              <ipv6>
+                <static-route>
+                  <entry name="v6-default"><nexthop><ipv6-address>2001:db8::1</ipv6-address></nexthop><destination>::/0</destination><interface>ethernet1/1</interface></entry>
+                </static-route>
+              </ipv6>
+            </routing-table>
+            <protocol>
+              <redist-profile>
+                <entry name="connected"><priority>1</priority><filter><type><member>connect</member></type></filter><action><redist/></action></entry>
+                <entry name="statics"><priority>2</priority><filter><type><member>static</member></type></filter><action><redist/></action></entry>
+                <entry name="lan-only"><priority>3</priority><filter><type><member>connect</member></type><destination><member>10.0.0.0/16</member></destination></filter><action><redist/></action></entry>
+                <entry name="orphan"><priority>9</priority><filter><type><member>rip</member></type></filter><action><redist/></action></entry>
+              </redist-profile>
+              <bgp>
+                <enable>yes</enable>
+                <router-id>203.0.113.2</router-id>
+                <local-as>65010</local-as>
+                <install-route>yes</install-route>
+                <routing-options>
+                  <graceful-restart><enable>yes</enable></graceful-restart>
+                  <default-local-preference>150</default-local-preference>
+                  <as-format>4-byte</as-format>
+                </routing-options>
+                <auth-profile>
+                  <entry name="isp-md5"><secret>-AQ==encryptedsecret</secret></entry>
+                </auth-profile>
+                <peer-group>
+                  <entry name="ISP">
+                    <type><ebgp><remove-private-as>yes</remove-private-as><export-nexthop>use-self</export-nexthop><import-nexthop>original</import-nexthop></ebgp></type>
+                    <enable>yes</enable>
+                    <peer>
+                      <entry name="isp1">
+                        <peer-as>64500</peer-as>
+                        <enable>yes</enable>
+                        <local-address><interface>ethernet1/1</interface><ip>203.0.113.2/29</ip></local-address>
+                        <peer-address><ip>203.0.113.1</ip></peer-address>
+                        <connection-options><authentication>isp-md5</authentication><keep-alive-interval>10</keep-alive-interval><hold-time>30</hold-time><multihop>2</multihop></connection-options>
+                        <max-prefixes>5000</max-prefixes>
+                      </entry>
+                    </peer>
+                  </entry>
+                  <entry name="IBGP">
+                    <type><ibgp><export-nexthop>original</export-nexthop></ibgp></type>
+                    <peer>
+                      <entry name="core"><peer-as>65010</peer-as><local-address><interface>ae1.100</interface><ip>10.1.0.1/24</ip></local-address><peer-address><ip>10.1.0.2</ip></peer-address><reflector-client>client</reflector-client></entry>
+                    </peer>
+                  </entry>
+                </peer-group>
+                <policy>
+                  <aggregation>
+                    <address>
+                      <entry name="agg-lan"><prefix>10.0.0.0/16</prefix><enable>yes</enable><summary>yes</summary></entry>
+                      <entry name="agg-complex"><prefix>10.1.0.0/16</prefix><enable>yes</enable><aggregate-route-attributes><med>50</med></aggregate-route-attributes></entry>
+                    </address>
+                  </aggregation>
+                  <export>
+                    <rules><entry name="no-private"><action><deny/></action><match><address-prefix><entry name="10.0.0.0/8"/></address-prefix></match></entry></rules>
+                  </export>
+                </policy>
+                <redist-rules>
+                  <entry name="198.51.100.0/24"><enable>yes</enable><set-origin>igp</set-origin></entry>
+                  <entry name="connected"><enable>yes</enable><set-med>20</set-med></entry>
+                  <entry name="lan-only"><enable>yes</enable></entry>
+                </redist-rules>
+              </bgp>
+              <ospf>
+                <enable>yes</enable>
+                <router-id>10.1.0.1</router-id>
+                <auth-profile>
+                  <entry name="ospf-md5"><md5><entry name="1"><key>-AQ==ospfkey</key><preferred>yes</preferred></entry></md5></entry>
+                </auth-profile>
+                <area>
+                  <entry name="0.0.0.0">
+                    <type><normal/></type>
+                    <interface>
+                      <entry name="ae1.100"><enable>yes</enable><passive>no</passive><metric>10</metric><priority>1</priority><hello-interval>5</hello-interval><dead-counts>3</dead-counts><authentication>ospf-md5</authentication><link-type><broadcast/></link-type></entry>
+                      <entry name="ethernet1/2.10"><enable>yes</enable><passive>yes</passive><link-type><broadcast/></link-type></entry>
+                    </interface>
+                    <range><entry name="10.0.0.0/16"><advertise/></entry></range>
+                  </entry>
+                  <entry name="0.0.0.1">
+                    <type><stub><accept-summary>no</accept-summary><default-route><advertise><metric>20</metric></advertise></default-route></stub></type>
+                    <interface>
+                      <entry name="ethernet1/20"><enable>yes</enable><link-type><p2mp/></link-type><neighbor><entry name="10.0.30.2"/></neighbor></entry>
+                    </interface>
+                  </entry>
+                  <entry name="0.0.0.2">
+                    <type><nssa><accept-summary>yes</accept-summary><default-route><advertise><metric>30</metric><type>ext-1</type></advertise></default-route><nssa-ext-range><entry name="172.20.0.0/16"><suppress/></entry></nssa-ext-range></nssa></type>
+                  </entry>
+                </area>
+                <export-rules>
+                  <entry name="0.0.0.0/0"><new-path-type>ext-1</new-path-type><metric>5</metric></entry>
+                  <entry name="statics"><new-path-type>ext-2</new-path-type><metric>100</metric></entry>
+                </export-rules>
+              </ospf>
+              <rip><enable>no</enable></rip>
+            </protocol>
+            <multicast><enable>yes</enable><interface-group><entry name="g1"><interface><member>ethernet1/2.10</member></interface></entry></interface-group></multicast>
+          </entry>
+          <entry name="vr2">
+            <interface><member>ethernet1/2.20</member></interface>
+            <routing-table><ip><static-route><entry name="back"><nexthop><next-vr>default</next-vr></nexthop><destination>0.0.0.0/0</destination></entry></static-route></ip></routing-table>
+          </entry>
+        </virtual-router>
+      </network>
+      <vsys>
+        <entry name="vsys1">
+          <import>
+            <network>
+              <interface>
+                <member>ethernet1/1</member><member>ethernet1/2.10</member><member>ethernet1/2.20</member><member>ae1.100</member><member>ethernet1/5</member><member>ethernet1/20</member><member>ethernet1/21</member><member>tunnel.1</member>
+              </interface>
+              <virtual-router><member>default</member><member>vr2</member></virtual-router>
+            </network>
+          </import>
+          <zone>
+            <entry name="untrust"><network><layer3><member>ethernet1/1</member></layer3></network></entry>
+            <entry name="trust"><network><layer3><member>ethernet1/2.10</member><member>ae1.100</member></layer3></network></entry>
+            <entry name="guest"><network><layer3><member>ethernet1/2.20</member><member>ethernet1/5</member></layer3></network></entry>
+            <entry name="dmz"><network><layer3><member>ethernet1/20</member></layer3></network></entry>
+            <entry name="mgmt-net"><network><layer3><member>ethernet1/21</member></layer3></network></entry>
+            <entry name="vpn"><network><layer3><member>tunnel.1</member></layer3></network></entry>
+          </zone>
+          <rulebase>
+            <security>
+              <rules>
+                <entry name="lan-out"><from><member>trust</member></from><to><member>untrust</member></to><source><member>any</member></source><destination><member>any</member></destination><application><member>any</member></application><service><member>application-default</member></service><action>allow</action></entry>
+                <entry name="dmz-in"><from><member>untrust</member><member>old-zone</member></from><to><member>dmz</member></to><source><member>any</member></source><destination><member>srv-web</member></destination><application><member>web-browsing</member></application><service><member>application-default</member></service><action>allow</action></entry>
+              </rules>
+            </security>
+            <nat>
+              <rules>
+                <entry name="snat"><from><member>trust</member></from><to><member>untrust</member></to><source><member>any</member></source><destination><member>any</member></destination><service>any</service>
+                  <source-translation><dynamic-ip-and-port><interface-address><interface>ethernet1/1</interface></interface-address></dynamic-ip-and-port></source-translation>
+                </entry>
+              </rules>
+            </nat>
+          </rulebase>
+        </entry>
+      </vsys>
+    </entry>
+  </devices>
+</config>

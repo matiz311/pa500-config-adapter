@@ -1,0 +1,2999 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adattatore PA-500</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='8' width='28' height='16' rx='3' fill='%23252B32'/%3E%3Crect x='6' y='12' width='6' height='6' fill='%2322C3D2'/%3E%3Crect x='14' y='12' width='6' height='6' fill='%230D1114'/%3E%3Crect x='22' y='12' width='6' height='6' fill='%230D1114'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #E7EBEE;
+  --surface: #F6F8F9;
+  --surface-2: #EDF1F3;
+  --ink: #17212B;
+  --muted: #52606D;
+  --rule: #C8D0D7;
+  --rule-strong: #A9B5BF;
+  --fiber: #08707C;
+  --fiber-hover: #065C66;
+  --fiber-ink: #FFFFFF;
+  --fiber-soft: #D5EDF0;
+  --led: #22C3D2;
+  --led-glow: rgba(34, 195, 210, .55);
+  --chassis: #252B32;
+  --chassis-2: #1D2228;
+  --socket: #0D1114;
+  --rim: #3B444E;
+  --chassis-ink: #95A3AF;
+  --ok: #2A7330;
+  --warn: #9A5B00;
+  --manual: #3559A8;
+  --err: #B3261E;
+  --info: #5B6772;
+  --ok-soft: #E2F0E3;
+  --warn-soft: #F7EBD7;
+  --manual-soft: #E3E9F6;
+  --err-soft: #F7E0DE;
+  --info-soft: #E6EBEE;
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F1418;
+    --surface: #161C21;
+    --surface-2: #1B2228;
+    --ink: #E2E8ED;
+    --muted: #9AA6B1;
+    --rule: #28323B;
+    --rule-strong: #3A4651;
+    --fiber: #4CCAD6;
+    --fiber-hover: #6FD6DF;
+    --fiber-ink: #06272B;
+    --fiber-soft: #12343A;
+    --led: #3DDBE8;
+    --led-glow: rgba(61, 219, 232, .5);
+    --chassis: #0B0E11;
+    --chassis-2: #080A0C;
+    --socket: #000000;
+    --rim: #2E363E;
+    --chassis-ink: #8F9CA8;
+    --ok: #6BBF73;
+    --warn: #E0A040;
+    --manual: #8FA8F0;
+    --err: #F2867E;
+    --info: #9AA6B1;
+    --ok-soft: #16281A;
+    --warn-soft: #2C2312;
+    --manual-soft: #172036;
+    --err-soft: #331817;
+    --info-soft: #1D252C;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 var(--font);
+}
+code, kbd, pre, .mono { font-family: var(--mono); font-size: .9em; }
+a { color: var(--fiber); }
+h1, h2, h3 { margin: 0; line-height: 1.2; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--fiber); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- testata ---------- */
+.top {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 24px 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 40px;
+  align-items: end;
+}
+.top h1 { font-size: 28px; font-weight: 650; letter-spacing: -.01em; }
+.top .lede { margin-top: 8px; max-width: 70ch; color: var(--muted); }
+.privacy {
+  display: flex; gap: 8px; align-items: flex-start;
+  max-width: 34ch; font-size: 13px; color: var(--muted);
+}
+.privacy svg { flex: none; margin-top: 2px; color: var(--fiber); }
+
+/* ---------- impaginazione ---------- */
+.layout {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 24px 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 470px);
+  gap: 32px;
+  align-items: start;
+}
+.steps { min-width: 0; }
+.step {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 16px;
+  padding: 28px 0;
+  border-top: 1px solid var(--rule);
+}
+.step:first-child { border-top: 0; padding-top: 12px; }
+.step-n {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1.5px solid var(--rule-strong);
+  display: grid; place-items: center;
+  font-weight: 650; font-size: 14px; color: var(--muted);
+}
+.step.is-done .step-n { border-color: var(--fiber); color: var(--fiber); }
+.step h2 { font-size: 19px; font-weight: 650; }
+.step .sub { margin-top: 6px; color: var(--muted); max-width: 72ch; }
+.step-body > * + * { margin-top: 16px; }
+
+/* ---------- caricamento file ---------- */
+.drops { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.drop {
+  position: relative;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: 8px;
+  padding: 16px;
+  background: transparent;
+  min-height: 150px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: border-color .15s, background-color .15s;
+}
+.drop.is-over { border-color: var(--fiber); background: var(--fiber-soft); }
+.drop.is-loaded { border-style: solid; border-color: var(--rule); background: var(--surface); }
+.drop.is-error { border-color: var(--err); }
+.drop h3 { font-size: 15px; font-weight: 600; }
+.drop .hint { font-size: 13px; color: var(--muted); }
+.drop .actions { margin-top: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.drop .or { font-size: 13px; color: var(--muted); }
+.drop .err { color: var(--err); font-size: 13px; }
+.facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-size: 13px; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.file-name { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+
+/* ---------- controlli ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 14px; font-weight: 550;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--fiber); }
+.btn.primary { background: var(--fiber); border-color: var(--fiber); color: var(--fiber-ink); }
+.btn.primary:hover { background: var(--fiber-hover); border-color: var(--fiber-hover); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--fiber); padding-inline: 6px; }
+.btn.quiet:hover { text-decoration: underline; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.field { display: grid; gap: 4px; }
+.field label, .lbl { font-size: 13px; font-weight: 600; }
+input[type=text], select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  padding: 7px 9px;
+  min-width: 0;
+}
+textarea { width: 100%; resize: vertical; font-family: var(--mono); font-size: 13px; line-height: 1.45; }
+input.mono { font-family: var(--mono); font-size: 13px; }
+.row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+
+/* ---------- pannello frontale ---------- */
+.faceplate-wrap { overflow-x: auto; padding-bottom: 4px; }
+.faceplate {
+  display: inline-flex; align-items: stretch; gap: 26px;
+  min-width: 100%;
+  background: linear-gradient(180deg, var(--chassis), var(--chassis-2));
+  border: 1px solid var(--rim);
+  border-radius: 10px;
+  padding: 18px 22px 12px;
+  color: var(--chassis-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.fp-brand { display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-width: 78px; }
+.fp-model { font-weight: 650; font-size: 16px; color: #E9EEF2; letter-spacing: .02em; }
+.fp-mgmt { font-size: 11px; display: flex; flex-direction: column; gap: 5px; }
+.fp-mgmt .sock-mini { position: relative; width: 30px; height: 26px; }
+.fp-group { display: flex; flex-direction: column; gap: 8px; }
+.fp-ports { display: grid; grid-template-rows: repeat(2, 36px); grid-auto-flow: column; gap: 8px 6px; align-items: center; }
+.fp-cap { font-size: 11px; text-align: center; white-space: nowrap; border-top: 1px solid var(--rim); padding-top: 5px; }
+/* presa RJ-45: bordo disegnato dal riempimento esterno, interno ritagliato con la stessa sagoma */
+.port, .fp-mgmt .sock-mini {
+  --jack: polygon(0 0, 100% 0, 100% 72%, 68% 72%, 68% 100%, 32% 100%, 32% 72%, 0 72%);
+}
+.port {
+  position: relative;
+  width: 40px; height: 34px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+}
+.port.flip { --jack: polygon(32% 0, 68% 0, 68% 28%, 100% 28%, 100% 100%, 0 100%, 0 28%, 32% 28%); }
+.port .sock, .fp-mgmt .sock-mini::before {
+  position: absolute; inset: 0;
+  background: var(--rim);
+  clip-path: var(--jack);
+}
+.fp-mgmt .sock-mini::before { content: ""; }
+.fp-mgmt .sock-mini.is-ha::before { background: #E0A040; }
+.port .sock::after, .fp-mgmt .sock-mini::after {
+  content: ""; position: absolute; inset: 2px;
+  background: var(--socket);
+  clip-path: var(--jack);
+}
+.port.sfp { width: 44px; height: 24px; }
+.port.sfp .sock, .port.sfp .sock::after { clip-path: none; border-radius: 2px; }
+.port.sfp .sock::after { background: linear-gradient(180deg, var(--socket) 0 58%, #1A2026 58% 66%, var(--socket) 66%); }
+.port .num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: var(--chassis-ink); font-family: var(--mono); padding-bottom: 8px; }
+.port.flip .num { padding: 8px 0 0; }
+.port.sfp .num { padding: 0 0 2px; }
+.port .led {
+  position: absolute; top: -4px; right: -4px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #4A535C;
+  box-shadow: 0 0 0 2px var(--chassis);
+}
+.port.flip .led { top: auto; bottom: -4px; }
+.port.is-used .sock { background: var(--led); }
+.port.is-used .led { background: var(--led); box-shadow: 0 0 0 2px var(--chassis), 0 0 10px var(--led-glow); }
+.port.is-used .num { color: #EEF3F6; }
+.port.is-ha .sock { background: #E0A040; }
+.port.is-ha .led { background: #E0A040; box-shadow: 0 0 0 2px var(--chassis), 0 0 10px rgba(224, 160, 64, .55); }
+.port.is-ha .num { color: #EEF3F6; }
+.port.is-err .sock { background: #F2867E; }
+.port.is-err .led { background: #F2867E; }
+.port.is-sel { outline: 2px solid #EEF3F6; outline-offset: 4px; border-radius: 2px; }
+.port:hover .num { color: #fff; }
+.port .poe { position: absolute; left: 5px; top: 5px; width: 7px; height: 2px; background: #E0C040; border-radius: 1px; z-index: 1; }
+.port.flip .poe { top: auto; bottom: 5px; }
+.fp-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+.fp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.fp-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.fp-note { font-size: 13px; color: var(--muted); }
+.fp-strays { margin-top: 10px; font-size: 13px; color: var(--err); }
+
+/* ---------- tabella porte ---------- */
+.map-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.map { width: 100%; border-collapse: collapse; font-size: 14px; }
+.map th { text-align: left; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--rule-strong); }
+.map td { padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.map tr.is-sel td { background: var(--fiber-soft); }
+.map tr.is-unused .if-name { color: var(--muted); }
+.if-pick {
+  border: 0; background: none; padding: 0; cursor: pointer; text-align: left;
+  font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--ink);
+}
+.if-pick:hover { color: var(--fiber); }
+.if-kind { display: block; font-size: 12px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: 12px; padding: 1px 7px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--rule); white-space: nowrap; }
+.chip.mono { font-family: var(--mono); font-size: 11.5px; }
+.map select { width: 100%; min-width: 150px; font-family: var(--mono); font-size: 13px; }
+.st { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; white-space: nowrap; }
+.st::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.st.ok { color: var(--ok); }
+.st.err { color: var(--err); }
+.st.warn { color: var(--warn); }
+.st.off { color: var(--info); }
+
+/* ---------- regole ---------- */
+.rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.rule { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.rule:last-child { border-bottom: 0; }
+.rule input { margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--fiber); }
+.rule label { font-weight: 600; cursor: pointer; }
+.rule .desc { grid-column: 2; font-size: 13.5px; color: var(--muted); }
+.rule.sub { margin-left: 32px; padding-top: 4px; border-bottom: 0; }
+.rule.is-disabled label, .rule.is-disabled .desc { opacity: .55; }
+.custom-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.custom-head h3 { font-size: 16px; font-weight: 650; }
+.custom-list { display: grid; gap: 10px; }
+.crule {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 150px auto;
+  gap: 8px 10px; align-items: center;
+  padding: 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface);
+}
+.crule input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--fiber); }
+.crule .xp { grid-column: 2 / 4; }
+.crule .val { grid-column: 2 / 4; display: flex; gap: 8px; }
+.crule .val input { flex: 1; }
+.crule .hits { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.crule .hits.zero { color: var(--warn); }
+.crule .hits.bad { color: var(--err); }
+.crule.is-off { opacity: .6; }
+.empty-note { font-size: 13.5px; color: var(--muted); }
+
+/* ---------- errori di commit ---------- */
+.errs { display: grid; gap: 10px; }
+.err-item { border-left: 3px solid var(--rule-strong); padding: 6px 0 6px 12px; display: grid; gap: 6px; }
+.err-item.found { border-color: var(--warn); }
+.err-item.miss { border-color: var(--info); }
+.err-item.fixed { border-color: var(--ok); }
+.err-raw { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.err-where { font-size: 13px; color: var(--muted); }
+.err-hint { font-size: 13px; }
+.err-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.err-actions .btn { font-size: 13px; padding: 4px 10px; }
+details.xml summary { cursor: pointer; font-size: 13px; color: var(--fiber); }
+pre.code {
+  margin: 6px 0 0; padding: 10px 12px;
+  background: var(--surface-2); border: 1px solid var(--rule); border-radius: 6px;
+  font-size: 12px; line-height: 1.45; overflow: auto; max-height: 340px; white-space: pre;
+}
+
+/* ---------- risultato ---------- */
+.result {
+  position: sticky; top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 20px;
+}
+.result h2 { font-size: 19px; font-weight: 650; }
+.result .meta { margin-top: 4px; font-size: 13px; color: var(--muted); }
+.result > * + * { margin-top: 16px; }
+.empty { color: var(--muted); }
+.levels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.lvl {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  border: 1px solid var(--rule); border-radius: 6px; background: var(--surface);
+  padding: 7px 10px; cursor: pointer; text-align: left; font-size: 13.5px;
+}
+.lvl b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.lvl[data-level=error] b { color: var(--err); }
+.lvl[data-level=manual] b { color: var(--manual); }
+.lvl[data-level=check] b { color: var(--warn); }
+.lvl[data-level=done] b { color: var(--ok); }
+.lvl[aria-pressed=true] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.lvl.zero b { color: var(--muted); }
+.dl { display: grid; gap: 8px; }
+.dl .field input { width: 100%; font-family: var(--mono); font-size: 13px; }
+.dl .row .btn { flex: 1; justify-content: center; }
+.verdict { font-size: 14px; padding: 10px 12px; border-radius: 6px; }
+.verdict.bad { background: var(--err-soft); color: var(--err); }
+.verdict.good { background: var(--ok-soft); color: var(--ok); }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); }
+.tab {
+  border: 0; background: none; padding: 8px 10px; cursor: pointer;
+  font-size: 14px; font-weight: 550; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected=true] { color: var(--ink); border-bottom-color: var(--fiber); }
+.panel > * + * { margin-top: 12px; }
+.ritems { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.ritem { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 4px 10px; padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
+.ritem:last-child { border-bottom: 0; }
+.ritem .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; }
+.ritem[data-level=error] .dot { background: var(--err); }
+.ritem[data-level=manual] .dot { background: var(--manual); }
+.ritem[data-level=check] .dot { background: var(--warn); }
+.ritem[data-level=done] .dot { background: var(--ok); }
+.ritem[data-level=info] .dot { background: var(--info); }
+.ritem .area { font-size: 12px; color: var(--muted); }
+.ritem .msg code { background: var(--surface-2); padding: 0 4px; border-radius: 3px; border: 1px solid var(--rule); font-size: 12px; overflow-wrap: anywhere; }
+.ritem details, .ritem .xpath { grid-column: 2; }
+.ritem .xpath { font-family: var(--mono); font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.panel { min-width: 0; }
+.steps-load { margin: 0; padding-left: 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; font-size: 14px; }
+.steps-load li { min-width: 0; }
+.steps-load li > * + * { margin-top: 6px; }
+.cmd { display: grid; gap: 4px; }
+.cmd .btn { justify-self: end; font-size: 12px; padding: 2px 8px; }
+.cmd pre.code { margin: 0; }
+.counts { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.counts td { padding: 6px 4px; border-bottom: 1px solid var(--rule); }
+.counts td.n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.counts td.lim input { width: 76px; padding: 3px 6px; font-size: 13px; text-align: right; }
+.counts tr.over td { color: var(--err); }
+.small { font-size: 13px; color: var(--muted); }
+.xp-row { display: flex; gap: 8px; }
+.xp-row input { flex: 1; font-family: var(--mono); font-size: 12.5px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.toast.show { opacity: 1; }
+
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .result { position: static; max-height: none; }
+  .top { grid-template-columns: minmax(0, 1fr); }
+  .privacy { max-width: none; }
+}
+@media (max-width: 720px) {
+  .top, .layout { padding-inline: 16px; }
+  .top h1 { font-size: 23px; }
+  .drops { grid-template-columns: minmax(0, 1fr); }
+  .step { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .map thead { display: none; }
+  .map, .map tbody, .map tr, .map td { display: block; width: 100%; }
+  .map tr { border-bottom: 1px solid var(--rule-strong); padding: 6px 0; }
+  .map td { border: 0; padding: 4px 0; }
+  .crule { grid-template-columns: 22px minmax(0, 1fr); }
+  .crule .xp, .crule .val { grid-column: 1 / -1; }
+  .levels { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Adattatore di configurazione per PA-500</h1>
+    <p class="lede">Prende l'export XML di un firewall Palo Alto e lo prepara per i PA-500 con PAN-OS 12.1: converte il routing all'Advanced Routing, sposta le interfacce sulle porte del nuovo modello, sistema l'HA e ti dice cosa resta da fare a mano.</p>
+  </div>
+  <p class="privacy">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 7V5a4 4 0 0 1 8 0v2M3 7h10v7H3z"/></svg>
+    <span>Lavora solo in questo browser: la config non viene caricata da nessuna parte e la pagina funziona anche senza rete.</span>
+  </p>
+</header>
+
+<main class="layout">
+  <div class="steps">
+
+    <section class="step" id="s1" aria-labelledby="s1-t">
+      <div class="step-n" aria-hidden="true">1</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s1-t">Carica le configurazioni</h2>
+          <p class="sub">Esporta la config da Device &gt; Setup &gt; Operations &gt; Export named configuration snapshot, oppure usa il device state: il file viene letto qui, in locale.</p>
+        </div>
+        <div class="drops">
+          <div class="drop" id="drop-src" data-slot="src">
+            <h3>Config sorgente</h3>
+            <p class="hint">Il running-config.xml del firewall attuale o il suo device state (.tgz).</p>
+            <div class="slot-body"></div>
+            <div class="actions">
+              <label class="btn primary"><input type="file" accept=".xml,.tgz,.gz,.tar,application/xml,text/xml" class="sr-only" data-file="src">Scegli file</label>
+              <span class="or">oppure trascinalo qui</span>
+            </div>
+          </div>
+          <div class="drop" id="drop-tgt" data-slot="tgt">
+            <h3>Config del PA-500 (facoltativa)</h3>
+            <p class="hint">L'export del nuovo firewall: serve a mantenere management, HA e amministratori già configurati.</p>
+            <div class="slot-body"></div>
+            <div class="actions">
+              <label class="btn"><input type="file" accept=".xml,.tgz,.gz,.tar,application/xml,text/xml" class="sr-only" data-file="tgt">Scegli file</label>
+              <span class="or">oppure trascinalo qui</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" id="s2" aria-labelledby="s2-t">
+      <div class="step-n" aria-hidden="true">2</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s2-t">Scegli il modello e assegna le porte</h2>
+          <p class="sub">Ogni interfaccia della sorgente va su una porta del PA-500 o viene esclusa. Le sub-interfacce seguono la porta madre.</p>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="model">Modello di destinazione</label>
+            <select id="model"></select>
+          </div>
+          <div class="field" id="custom-ports-field" hidden>
+            <label for="custom-ports">Porte del modello</label>
+            <input type="text" id="custom-ports" class="mono" size="34" placeholder="1-12 rj45, 13-14 sfp, 15-16 sfp+">
+          </div>
+        </div>
+        <div>
+          <div class="faceplate-wrap"><div class="faceplate" id="faceplate" role="group" aria-label="Pannello frontale"></div></div>
+          <div class="fp-legend">
+            <span><i style="background:var(--led)"></i>assegnata</span>
+            <span><i style="background:#E0A040"></i>HA</span>
+            <span><i style="background:#F2867E"></i>da correggere</span>
+            <span><i style="background:#4A535C"></i>libera</span>
+            <span><i style="background:#E0C040;border-radius:1px;height:3px"></i>PoE</span>
+          </div>
+          <p class="fp-strays" id="fp-strays" hidden></p>
+        </div>
+        <p class="fp-note">Seleziona un'interfaccia nella tabella, poi clicca una porta del pannello per assegnarla. La numerazione ethernet1/N segue la posizione sul pannello frontale: verificala con <code>show interface all</code> sul PA-500.</p>
+        <div class="map-tools">
+          <span class="small" id="map-summary"></span>
+          <span>
+            <button type="button" class="btn" id="btn-drop-unused">Escludi le non usate</button>
+            <button type="button" class="btn quiet" id="btn-reset-map">Ripristina</button>
+          </span>
+        </div>
+        <div id="map-wrap"><p class="empty-note">Carica la config sorgente per vedere le sue interfacce.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="s3" aria-labelledby="s3-t">
+      <div class="step-n" aria-hidden="true">3</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s3-t">Scegli le regole</h2>
+          <p class="sub">Le regole standard coprono i limiti noti dei PA-500. Il risultato si aggiorna a ogni modifica.</p>
+        </div>
+        <ul class="rules" id="rules"></ul>
+        <div class="custom-head">
+          <div>
+            <h3>Regole personalizzate</h3>
+            <p class="sub">Interventi XPath applicati dopo le regole standard, nell'ordine dell'elenco. Restano salvati in questo browser; esportali per usarli su un altro PC.</p>
+          </div>
+          <span>
+            <button type="button" class="btn" id="btn-add-rule">Aggiungi regola</button>
+            <button type="button" class="btn quiet" id="btn-export-rules">Esporta</button>
+            <label class="btn quiet"><input type="file" accept=".json,application/json" class="sr-only" id="file-rules">Importa</label>
+          </span>
+        </div>
+        <div class="custom-list" id="custom-list"></div>
+      </div>
+    </section>
+
+    <section class="step" id="s4" aria-labelledby="s4-t">
+      <div class="step-n" aria-hidden="true">4</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s4-t">Correggi gli errori di validate o commit</h2>
+          <p class="sub">Carica la config sul PA-500, lancia validate e incolla qui gli errori. Per ognuno trovo l'elemento nella config convertita e propongo una correzione, che diventa una regola personalizzata: così vale anche per le prossime config.</p>
+        </div>
+        <div class="field">
+          <label for="errors">Output di validate o commit</label>
+          <textarea id="errors" rows="6" placeholder="vsys -> vsys1 -> rulebase -> security -> rules -> dmz-in -> from 'old-zone' is not a valid reference"></textarea>
+        </div>
+        <div class="row">
+          <button type="button" class="btn primary" id="btn-errors">Analizza errori</button>
+          <label class="small"><input type="checkbox" id="err-generic"> Crea regole generiche, senza i nomi delle entry</label>
+        </div>
+        <div class="errs" id="err-list"></div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="result" id="result" aria-labelledby="r-t">
+    <div>
+      <h2 id="r-t">Risultato</h2>
+      <p class="meta" id="r-meta" aria-live="polite"></p>
+    </div>
+    <div id="r-body"><p class="empty">Carica la config sorgente: qui compaiono il report della conversione e il file da scaricare.</p></div>
+  </aside>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/*
+ * Motore di conversione: config PAN-OS (XML) -> config accettata dai firewall PA-500 (PAN-OS 12.1).
+ * Nessuna dipendenza: usa solo DOMParser, XPath e DOM standard del browser.
+ *
+ * Nomi degli elementi dell'Advanced Routing Engine verificati sugli schemi pubblicati da
+ * Palo Alto (pan-os-codegen) e sull'SDK pan-os-python:
+ *   deviceconfig/setting/advance-routing, network/logical-router/entry/vrf/entry/...,
+ *   network/routing-profile/..., vsys/entry/import/network/logical-router.
+ */
+(function (root) {
+  'use strict';
+
+  const DROP = '__drop__';
+  const MGMT = 'management';
+
+  // ------------------------------------------------------------------ modelli PA-500
+  // Porte dedotte dai pannelli frontali della PA-500 Hardware Reference; la porta N è ethernet1/N.
+  const MODELS = [
+    { id: 'PA-501', groups: [['RJ-45', 1000, 1, 7]] },
+    { id: 'PA-505', groups: [['RJ-45', 1000, 1, 7]] },
+    { id: 'PA-510', groups: [['RJ-45', 1000, 1, 8]] },
+    { id: 'PA-520', groups: [['RJ-45', 1000, 1, 8]], ztp: 1 },
+    { id: 'PA-520-5G', groups: [['RJ-45', 1000, 1, 8], ['SFP', 1000, 9, 10]], ztp: 1, failOpen: [3, 4], cellular: ['cellular1/1'] },
+    { id: 'PA-540', groups: [['RJ-45', 1000, 1, 8], ['SFP', 1000, 9, 10]], ztp: 1 },
+    { id: 'PA-545-POE', groups: [['RJ-45', 1000, 1, 8], ['mGig', 2500, 9, 12], ['SFP', 1000, 13, 16]], ztp: 1, failOpen: [3, 4], poe: [9, 10, 11, 12] },
+    { id: 'PA-550', groups: [['RJ-45', 1000, 1, 12], ['SFP', 1000, 13, 14], ['SFP+', 10000, 15, 16]], ztp: 1, failOpen: [3, 4] },
+    { id: 'PA-555-POE', groups: [['RJ-45', 1000, 1, 8], ['mGig', 2500, 9, 12], ['SFP', 1000, 13, 14], ['SFP+', 10000, 15, 16]], ztp: 1, failOpen: [3, 4], poe: [5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'PA-560', groups: [['RJ-45', 1000, 1, 16], ['SFP', 1000, 17, 20], ['SFP+', 10000, 21, 24]], ztp: 1, failOpen: [3, 4] }
+  ];
+
+  const PORT_TYPES = { 'rj45': ['RJ-45', 1000], 'rj-45': ['RJ-45', 1000], 'mgig': ['mGig', 2500], 'sfp': ['SFP', 1000], 'sfp+': ['SFP+', 10000] };
+
+  /** Restituisce {id, ports:[{name,n,type,speed,poe,failOpen,ztp}], groups, cellular[]} */
+  function getModel(id, customSpec) {
+    let m = MODELS.find(x => x.id === id);
+    let groups;
+    if (!m) {
+      groups = parseCustomPorts(customSpec || '');
+      m = { id: 'Personalizzato', groups: [], cellular: [] };
+    } else {
+      groups = m.groups.map(g => ({ type: g[0], speed: g[1], from: g[2], to: g[3] }));
+    }
+    const ports = [];
+    for (const g of groups) {
+      for (let n = g.from; n <= g.to; n++) {
+        ports.push({
+          name: 'ethernet1/' + n, n, type: g.type, speed: g.speed,
+          poe: !!(m.poe && m.poe.includes(n)), failOpen: !!(m.failOpen && m.failOpen.includes(n)), ztp: m.ztp === n
+        });
+      }
+    }
+    return { id: m.id, groups, ports, cellular: m.cellular || [], byName: new Map(ports.map(p => [p.name, p])) };
+  }
+
+  /** "1-12 rj45, 13-14 sfp, 15-16 sfp+" -> gruppi */
+  function parseCustomPorts(spec) {
+    const groups = [];
+    for (const raw of spec.split(/[,;\n]+/)) {
+      const t = raw.trim().toLowerCase();
+      if (!t) continue;
+      const m = /^(?:ethernet1\/)?(\d+)(?:\s*-\s*(?:ethernet1\/|1\/)?(\d+))?\s*([a-z0-9+\-]*)$/.exec(t);
+      if (!m) continue;
+      const from = +m[1], to = m[2] ? +m[2] : from;
+      const pt = PORT_TYPES[m[3] || 'rj45'] || PORT_TYPES.rj45;
+      if (to >= from && to - from < 64) groups.push({ type: pt[0], speed: pt[1], from, to });
+    }
+    return groups;
+  }
+
+  // ------------------------------------------------------------------ helper XML
+  function kids(el, tag) {
+    const out = [];
+    if (!el) return out;
+    for (let c = el.firstElementChild; c; c = c.nextElementSibling) if (!tag || c.tagName === tag) out.push(c);
+    return out;
+  }
+  function kid(el, tag) {
+    if (!el) return null;
+    for (let c = el.firstElementChild; c; c = c.nextElementSibling) if (c.tagName === tag) return c;
+    return null;
+  }
+  function at(el, path) {
+    let cur = el;
+    for (const t of path.split('/')) { cur = kid(cur, t); if (!cur) return null; }
+    return cur;
+  }
+  function all(el, path) {
+    let cur = el ? [el] : [];
+    for (const t of path.split('/')) {
+      const nxt = [];
+      for (const c of cur) for (const k of kids(c, t)) nxt.push(k);
+      cur = nxt;
+    }
+    return cur;
+  }
+  function txt(el, path) {
+    const n = path ? at(el, path) : el;
+    return n ? n.textContent.trim() : null;
+  }
+  function mk(doc, tag, text) {
+    const e = doc.createElement(tag);
+    if (text != null) e.textContent = String(text);
+    return e;
+  }
+  function add(parent, tag, text) {
+    const e = mk(parent.ownerDocument, tag, text);
+    parent.appendChild(e);
+    return e;
+  }
+  function ensure(el, path) {
+    let cur = el;
+    for (const t of path.split('/')) cur = kid(cur, t) || add(cur, t);
+    return cur;
+  }
+  function ent(parent, name) {
+    if (!parent) return null;
+    for (let c = parent.firstElementChild; c; c = c.nextElementSibling) {
+      if (c.tagName === 'entry' && c.getAttribute('name') === name) return c;
+    }
+    return null;
+  }
+  function ensureEnt(parent, name) {
+    let e = ent(parent, name);
+    if (!e) { e = add(parent, 'entry'); e.setAttribute('name', name); }
+    return e;
+  }
+  function setText(el, path, value) {
+    const n = ensure(el, path);
+    while (n.firstChild) n.removeChild(n.firstChild);
+    n.textContent = String(value);
+    return n;
+  }
+  function cloneTo(parent, node) {
+    const c = parent.ownerDocument.importNode(node, true);
+    parent.appendChild(c);
+    return c;
+  }
+  function copyLeaf(src, dst, tag, dstTag) {
+    const v = txt(src, tag);
+    if (v != null && v !== '') add(dst, dstTag || tag, v);
+  }
+  function detach(n) { if (n && n.parentNode) n.parentNode.removeChild(n); }
+  function members(el) { return kids(el, 'member').map(m => m.textContent.trim()); }
+  function nameOf(el) { return el ? el.getAttribute('name') : null; }
+  function hasContent(el) { return !!el && (!!el.firstElementChild || el.textContent.trim() !== ''); }
+  function firstChildTag(el) { return el && el.firstElementChild ? el.firstElementChild.tagName : null; }
+  function isPrefix(s) { return /^[0-9a-f:.]+\/\d{1,3}$/i.test(s) && (s.includes('.') || s.includes(':')); }
+
+  // ------------------------------------------------------------------ serializzazione
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escAttr(s) { return esc(s).replace(/"/g, '&quot;').replace(/\n/g, '&#10;').replace(/\t/g, '&#9;'); }
+
+  function writeEl(el, depth, out) {
+    const ind = '  '.repeat(depth);
+    let open = ind + '<' + el.tagName;
+    for (const a of Array.from(el.attributes)) open += ' ' + a.name + '="' + escAttr(a.value) + '"';
+    if (!el.firstElementChild) {
+      let t = '';
+      for (let c = el.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType === 3) t += esc(c.nodeValue);
+        else if (c.nodeType === 4) t += '<![CDATA[' + c.nodeValue + ']]>';
+      }
+      out.push(t === '' ? open + '/>\n' : open + '>' + t + '</' + el.tagName + '>\n');
+      return;
+    }
+    out.push(open + '>\n');
+    for (let c = el.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 1) writeEl(c, depth + 1, out);
+      else if (c.nodeType === 3 && c.nodeValue.trim() !== '') out.push(ind + '  ' + esc(c.nodeValue.trim()) + '\n');
+      else if (c.nodeType === 4) out.push(ind + '  <![CDATA[' + c.nodeValue + ']]>\n');
+      else if (c.nodeType === 8) out.push(ind + '  <!--' + c.nodeValue + '-->\n');
+    }
+    out.push(ind + '</' + el.tagName + '>\n');
+  }
+  function serialize(doc) {
+    const out = ['<?xml version="1.0"?>\n'];
+    writeEl(doc.documentElement, 0, out);
+    return out.join('');
+  }
+  function snippet(el, max) {
+    const out = [];
+    writeEl(el, 0, out);
+    const s = out.join('').replace(/\n$/, '');
+    const lim = max || 6000;
+    return s.length > lim ? s.slice(0, lim) + '\n<!-- ... troncato ... -->' : s;
+  }
+  function signature(el) {
+    const out = [];
+    for (let c = el.firstElementChild; c; c = c.nextElementSibling) writeEl(c, 0, out);
+    return out.join('');
+  }
+
+  function parse(text) {
+    const doc = new root.DOMParser().parseFromString(text, 'application/xml');
+    const perr = doc.getElementsByTagName('parsererror')[0];
+    if (perr) {
+      const msg = (perr.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+      throw new Error('Il file non è un XML valido. ' + msg);
+    }
+    return doc;
+  }
+
+  // ------------------------------------------------------------------ XPath e percorsi
+  function xq(s) {
+    if (!s.includes("'")) return "'" + s + "'";
+    if (!s.includes('"')) return '"' + s + '"';
+    return 'concat(' + s.split("'").map(p => "'" + p + "'").join(", \"'\", ") + ')';
+  }
+  function xpathOf(node, generic) {
+    const parts = [];
+    let n = node;
+    if (n.nodeType === 2) { parts.unshift('@' + n.name); n = n.ownerElement; }
+    else if (n.nodeType === 3) { parts.unshift('text()'); n = n.parentNode; }
+    for (; n && n.nodeType === 1; n = n.parentNode) {
+      let step = n.tagName;
+      const nm = n.getAttribute('name');
+      if (nm != null) { if (!generic) step += '[@name=' + xq(nm) + ']'; }
+      else if (n.tagName === 'member') step += '[.=' + xq(n.textContent.trim()) + ']';
+      else if (!generic && n.parentNode && n.parentNode.nodeType === 1) {
+        const same = kids(n.parentNode, n.tagName);
+        if (same.length > 1) step += '[' + (same.indexOf(n) + 1) + ']';
+      }
+      parts.unshift(step);
+    }
+    return '/' + parts.join('/');
+  }
+  /** Percorso leggibile: devices › localhost.localdomain › network › ... */
+  function humanPath(node) {
+    const parts = [];
+    for (let n = node; n && n.nodeType === 1; n = n.parentNode) {
+      const nm = n.getAttribute('name');
+      parts.unshift(n.tagName === 'entry' && nm != null ? nm : n.tagName);
+    }
+    if (parts[0] === 'config') parts.shift();
+    return parts.join(' › ');
+  }
+  function evalXPath(doc, expr) {
+    const res = doc.evaluate(expr, doc, null, 7 /* ORDERED_NODE_SNAPSHOT_TYPE */, null);
+    const out = [];
+    for (let i = 0; i < res.snapshotLength; i++) out.push(res.snapshotItem(i));
+    return out;
+  }
+
+  // ------------------------------------------------------------------ report
+  function Report() { this.items = []; }
+  Report.prototype.add = function (level, area, msg, extra) {
+    this.items.push(Object.assign({ level, area, msg }, extra || {}));
+  };
+
+  // ------------------------------------------------------------------ inventario
+  const MODE_TAGS = ['layer3', 'layer2', 'virtual-wire', 'tap', 'ha', 'aggregate-group', 'decrypt-mirror', 'log-card'];
+  const DEDICATED_HA = /^(ha1-a|ha1-b|ha2-a|ha2-b|hsci|dedicated-ha1|dedicated-ha2|ha1|ha2)$/i;
+  const HA_SECTIONS = ['ha1', 'ha1-backup', 'ha2', 'ha2-backup', 'ha3'];
+
+  function ifMode(e) {
+    for (const t of MODE_TAGS) if (kid(e, t)) return t;
+    return '';
+  }
+  function unitNames(e) {
+    const out = [];
+    for (const mode of ['layer3', 'layer2']) for (const u of all(e, mode + '/units/entry')) out.push(nameOf(u));
+    return out;
+  }
+  function baseName(n) { return n.replace(/\.\d+$/, ''); }
+
+  function interfaceInventory(dev) {
+    const zones = new Map(), routers = new Map();
+    const push = (map, key, v) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(v); };
+    for (const z of all(dev, 'vsys/entry/zone/entry')) {
+      const net = kid(z, 'network');
+      for (const t of kids(net)) for (const m of members(t)) push(zones, baseName(m), nameOf(z));
+    }
+    for (const vr of all(dev, 'network/virtual-router/entry')) for (const m of members(kid(vr, 'interface'))) push(routers, baseName(m), nameOf(vr));
+    for (const lr of all(dev, 'network/logical-router/entry')) {
+      for (const vrf of all(lr, 'vrf/entry')) for (const m of members(kid(vrf, 'interface'))) push(routers, baseName(m), nameOf(lr));
+    }
+    const ha = new Map();
+    for (const s of HA_SECTIONS) {
+      const p = txt(dev, 'deviceconfig/high-availability/interface/' + s + '/port');
+      if (p) push(ha, p, s);
+    }
+    const inv = [];
+    const aeMembers = new Map();
+    for (const e of all(dev, 'network/interface/ethernet/entry')) {
+      const g = txt(e, 'aggregate-group');
+      if (g) push(aeMembers, g, nameOf(e));
+    }
+    const describe = (e, kind) => {
+      const name = nameOf(e);
+      const units = unitNames(e);
+      const ips = all(e, 'layer3/ip/entry').map(nameOf);
+      return {
+        key: name, kind, mode: ifMode(e), units, ips,
+        dhcp: !!at(e, 'layer3/dhcp-client'), pppoe: !!at(e, 'layer3/pppoe'),
+        ae: txt(e, 'aggregate-group'), linkSpeed: txt(e, 'link-speed'), poe: !!kid(e, 'poe'),
+        zones: [...(zones.get(name) || [])], routers: [...(routers.get(name) || [])],
+        ha: [...(ha.get(name) || [])], members: [...(aeMembers.get(name) || [])],
+        comment: txt(e, 'comment') || ''
+      };
+    };
+    for (const e of all(dev, 'network/interface/ethernet/entry')) inv.push(describe(e, 'ethernet'));
+    for (const e of all(dev, 'network/interface/aggregate-ethernet/entry')) inv.push(describe(e, 'ae'));
+    for (const c of kids(at(dev, 'network/interface'))) {
+      for (const e of kids(c, 'entry')) {
+        if (/^cellular\d+\/\d+$/.test(nameOf(e) || '')) inv.push(describe(e, 'cellular'));
+      }
+    }
+    for (const [port, secs] of ha) {
+      if (DEDICATED_HA.test(port)) inv.push({ key: port, kind: 'ha-dedicated', mode: 'ha', units: [], ips: [], zones: [], routers: [], ha: [...secs], members: [], comment: '' });
+    }
+    for (const it of inv) {
+      it.used = (!!it.mode && it.mode !== 'aggregate-group') || it.zones.length > 0 || it.routers.length > 0 || it.ha.length > 0 || it.units.length > 0;
+    }
+    for (const it of inv) {
+      if (it.mode === 'aggregate-group' && it.ae) {
+        const parent = inv.find(x => x.key === it.ae);
+        it.used = parent ? parent.used : true;
+      }
+    }
+    return inv;
+  }
+
+  function analyze(doc) {
+    const r = doc.documentElement;
+    const info = { version: r.getAttribute('version') || '', kind: 'firewall', devices: [], users: [], ok: true, problem: '' };
+    if (r.tagName !== 'config') {
+      info.ok = false;
+      info.problem = 'Il file non è una configurazione PAN-OS: manca l\'elemento <config> iniziale.';
+      return info;
+    }
+    if (all(r, 'devices/entry/device-group').length || all(r, 'devices/entry/template').length || all(r, 'devices/entry/template-stack').length) {
+      info.kind = 'panorama';
+      info.ok = false;
+      info.problem = 'Sembra la configurazione di un Panorama. Carica l\'export del firewall (running-config.xml del dispositivo).';
+    }
+    for (const dev of all(r, 'devices/entry')) {
+      info.devices.push({
+        name: nameOf(dev),
+        hostname: txt(dev, 'deviceconfig/system/hostname') || '',
+        mgmtIp: txt(dev, 'deviceconfig/system/ip-address') || (at(dev, 'deviceconfig/system/type/dhcp-client') ? 'DHCP' : ''),
+        are: txt(dev, 'deviceconfig/setting/advance-routing') || '',
+        vsys: all(dev, 'vsys/entry').map(nameOf),
+        vrs: all(dev, 'network/virtual-router/entry').map(nameOf),
+        lrs: all(dev, 'network/logical-router/entry').map(nameOf),
+        haEnabled: txt(dev, 'deviceconfig/high-availability/enabled') === 'yes',
+        haPorts: HA_SECTIONS.map(s => [s, txt(dev, 'deviceconfig/high-availability/interface/' + s + '/port')]).filter(x => x[1]),
+        interfaces: interfaceInventory(dev)
+      });
+    }
+    if (!info.devices.length && info.ok) { info.ok = false; info.problem = 'Nella configurazione non c\'è nessun devices/entry.'; }
+    info.users = all(r, 'mgt-config/users/entry').map(nameOf);
+    return info;
+  }
+
+  /** Mappatura proposta: stesso nome se la porta esiste sul modello, altrimenti da scegliere. */
+  function defaultMap(inv, model) {
+    const map = {};
+    for (const it of inv) {
+      if (it.kind === 'ethernet') map[it.key] = model.byName.has(it.key) ? it.key : '';
+      else if (it.kind === 'ae') map[it.key] = it.key;
+      else if (it.kind === 'cellular') map[it.key] = model.cellular.includes(it.key) ? it.key : '';
+      else if (it.kind === 'ha-dedicated') map[it.key] = '';
+    }
+    return map;
+  }
+
+  // ------------------------------------------------------------------ profili di routing (ARE)
+  function profileStore(net) {
+    return {
+      /** Crea (o riusa se identico) un profilo; build(entry) lo riempie. */
+      add(kindPath, baseName, build) {
+        const tmp = mk(net.ownerDocument, 'entry');
+        build(tmp);
+        const sig = signature(tmp);
+        const container = ensure(net, 'routing-profile/' + kindPath);
+        for (const e of kids(container, 'entry')) if (signature(e) === sig) return nameOf(e);
+        let name = baseName, i = 2;
+        while (ent(container, name)) name = baseName + '-' + i++;
+        tmp.setAttribute('name', name);
+        container.appendChild(tmp);
+        return name;
+      },
+      /** Copia un profilo legacy con lo stesso nome; in caso di conflitto lo rinomina. */
+      copyNamed(kindPath, srcEntry) {
+        const container = ensure(net, 'routing-profile/' + kindPath);
+        const name = nameOf(srcEntry), sig = signature(srcEntry);
+        const ex = ent(container, name);
+        if (ex) {
+          if (signature(ex) === sig) return name;
+          let n2 = name, i = 2;
+          while (ent(container, n2)) n2 = name + '-' + i++;
+          cloneTo(container, srcEntry).setAttribute('name', n2);
+          return n2;
+        }
+        cloneTo(container, srcEntry);
+        return name;
+      }
+    };
+  }
+
+  // ------------------------------------------------------------------ regola: Advanced Routing
+  const AD_MAP = {
+    'static': ['static'], 'static-ipv6': ['static-ipv6'],
+    'ospf-int': ['ospf-intra', 'ospf-inter'], 'ospf-ext': ['ospf-ext'],
+    'ospfv3-int': ['ospfv3-intra', 'ospfv3-inter'], 'ospfv3-ext': ['ospfv3-ext'],
+    'ibgp': ['bgp-internal'], 'ebgp': ['bgp-external'], 'rip': ['rip']
+  };
+
+  function ruleARE(ctx) {
+    const { dev, R, opts } = ctx;
+    const area = 'Routing';
+    const net = ensure(dev, 'network');
+    const vrRoot = kid(net, 'virtual-router');
+    const vrs = kids(vrRoot, 'entry');
+    const flag = txt(dev, 'deviceconfig/setting/advance-routing');
+    const lrRoot = kid(net, 'logical-router');
+
+    if (vrs.length && flag === 'yes' && kids(lrRoot, 'entry').length) {
+      R.add('check', area, 'Advanced Routing era già attivo nella sorgente: rimossi i virtual router residui (' + vrs.map(nameOf).join(', ') + ') senza convertirli.', { xml: snippet(vrRoot, 3000) });
+      detach(vrRoot);
+    } else if (vrs.length) {
+      const rp = profileStore(net);
+      const lrs = ensure(net, 'logical-router');
+      moveBfdProfiles(net, R, rp);
+      for (const vr of vrs) {
+        const name = nameOf(vr);
+        if (ent(lrs, name)) {
+          R.add('error', area, 'Esiste già un logical router `' + name + '`: il virtual router con lo stesso nome non è stato convertito.');
+          continue;
+        }
+        lrs.appendChild(convertVR(ctx, vr, rp));
+      }
+      detach(vrRoot);
+      R.add('done', area, 'Convertiti ' + vrs.length + ' virtual router in logical router (VRF `default`): ' + vrs.map(v => '`' + nameOf(v) + '`').join(', ') + '.');
+    } else if (flag === 'yes') {
+      R.add('info', area, 'Advanced Routing già attivo nella sorgente: nessuna conversione necessaria.');
+    } else {
+      R.add('info', area, 'Nessun virtual router nella sorgente.');
+    }
+
+    const setting = ensure(dev, 'deviceconfig/setting');
+    const legacyFlag = kid(setting, 'advanced-routing');
+    if (legacyFlag) detach(legacyFlag);
+    if (flag !== 'yes') {
+      setText(setting, 'advance-routing', 'yes');
+      R.add('done', area, 'Impostato `deviceconfig/setting/advance-routing` = yes (sui PA-500 non si può disattivare).');
+    }
+
+    for (const vsys of all(dev, 'vsys/entry')) {
+      const imp = at(vsys, 'import/network/virtual-router');
+      if (!imp) continue;
+      const netImp = imp.parentNode;
+      const lrImp = kid(netImp, 'logical-router') || add(netImp, 'logical-router');
+      const have = new Set(members(lrImp));
+      for (const m of members(imp)) if (!have.has(m)) add(lrImp, 'member', m);
+      detach(imp);
+      R.add('done', area, 'vsys `' + nameOf(vsys) + '`: import dei router aggiornato da `virtual-router` a `logical-router`.');
+    }
+    void opts;
+  }
+
+  function moveBfdProfiles(net, R, rp) {
+    const legacy = at(net, 'profiles/bfd-profile');
+    const entries = kids(legacy, 'entry');
+    if (!entries.length) return;
+    const moved = [];
+    for (const e of entries) {
+      const n = rp.copyNamed('bfd', e);
+      moved.push(n === nameOf(e) ? '`' + n + '`' : '`' + nameOf(e) + '` → `' + n + '`');
+    }
+    detach(legacy);
+    R.add('done', 'Routing', 'Profili BFD spostati in `network/routing-profile/bfd`: ' + moved.join(', ') + '.');
+  }
+
+  function convertVR(ctx, vr, rp) {
+    const { doc, R, opts } = ctx;
+    const name = nameOf(vr);
+    const area = 'Routing';
+    const lr = mk(doc, 'entry');
+    lr.setAttribute('name', name);
+    const vrf = ensureEnt(ensure(lr, 'vrf'), 'default');
+
+    const ifs = kid(vr, 'interface');
+    if (ifs && ifs.firstElementChild) cloneTo(vrf, ifs);
+
+    // admin distance
+    const ad = kid(vr, 'admin-dists');
+    const adSet = {};
+    if (ad) {
+      for (const c of kids(ad)) {
+        const dst = AD_MAP[c.tagName];
+        if (!dst) { R.add('check', area, '`' + name + '`: admin distance `' + c.tagName + '` senza equivalente, ignorata.'); continue; }
+        for (const d of dst) adSet[d] = c.textContent.trim();
+      }
+    }
+    const proto = kid(vr, 'protocol');
+    const ospfOn = txt(proto, 'ospf/enable') === 'yes';
+    const ospf3On = txt(proto, 'ospfv3/enable') === 'yes';
+    if (ospfOn && !(ad && kid(ad, 'ospf-int'))) {
+      adSet['ospf-intra'] = '30'; adSet['ospf-inter'] = '30';
+      R.add('check', 'OSPF', '`' + name + '`: impostata admin distance OSPF interna a 30 come nel motore legacy (nell\'ARE il valore predefinito è 110). Toglila se vuoi i default ARE.');
+    }
+    if (ospf3On && !(ad && kid(ad, 'ospfv3-int'))) {
+      adSet['ospfv3-intra'] = '30'; adSet['ospfv3-inter'] = '30';
+      R.add('check', 'OSPF', '`' + name + '`: impostata admin distance OSPFv3 interna a 30 come nel motore legacy (default ARE 110).');
+    }
+    if (Object.keys(adSet).length) {
+      const oad = add(vrf, 'admin-dists');
+      for (const k of Object.keys(adSet)) add(oad, k, adSet[k]);
+      if (ad && ad.firstElementChild) R.add('done', area, '`' + name + '`: admin distance convertite (' + kids(ad).map(c => c.tagName + '=' + c.textContent.trim()).join(', ') + ').');
+    }
+
+    // static route
+    let nStatic = 0;
+    for (const fam of ['ip', 'ipv6']) {
+      const routes = all(vr, 'routing-table/' + fam + '/static-route/entry');
+      if (!routes.length) continue;
+      let sr = null;
+      for (const r of routes) {
+        const out = convertStaticRoute(ctx, r, name, fam);
+        if (!out) continue;
+        if (!sr) sr = ensure(vrf, 'routing-table/' + fam + '/static-route');
+        sr.appendChild(out);
+        nStatic++;
+      }
+    }
+    if (nStatic) R.add('done', area, '`' + name + '`: ' + nStatic + ' static route convertite.');
+
+    const ecmp = kid(vr, 'ecmp');
+    if (ecmp && ecmp.firstElementChild) {
+      cloneTo(vrf, ecmp);
+      R.add('done', area, '`' + name + '`: ECMP copiato nella VRF (stessa struttura nell\'ARE).');
+    }
+
+    if (proto) {
+      for (const p of kids(proto)) {
+        const enabled = txt(p, 'enable');
+        const meaningful = p.firstElementChild && !(enabled === 'no' && kids(p).length === 1);
+        if (!meaningful && p.tagName !== 'redist-profile') continue;
+        if (p.tagName === 'bgp' && opts.rules.dyn) convertBGP(ctx, { vr, vrName: name, lb: p, vrf, rp });
+        else if (p.tagName === 'ospf' && opts.rules.dyn) convertOSPF(ctx, { vr, vrName: name, lo: p, vrf, rp });
+        else if (p.tagName === 'redist-profile' || p.tagName === 'redist-profile-ipv6') {
+          if (!opts.rules.dyn && kids(p, 'entry').length) R.add('manual', area, '`' + name + '`: redistribution profile legacy da ricreare con i profili di redistribuzione e le route map dell\'ARE.', { xml: snippet(p) });
+        } else {
+          R.add('manual', p.tagName === 'bgp' ? 'BGP' : p.tagName.startsWith('ospf') ? 'OSPF' : area,
+            '`' + name + '`: ' + p.tagName.toUpperCase() + (enabled === 'yes' ? ' (attivo)' : '') + ' da ricostruire a mano nel logical router.', { xml: snippet(p) });
+        }
+      }
+    }
+
+    if (proto && opts.rules.dyn) {
+      const referenced = new Set(all(proto, 'bgp/redist-rules/entry').concat(all(proto, 'ospf/export-rules/entry')).map(nameOf));
+      const unused = all(proto, 'redist-profile/entry').map(nameOf).filter(n => !referenced.has(n));
+      if (unused.length) R.add('info', area, '`' + name + '`: redistribution profile non usati da BGP/OSPF, non convertiti: ' + unused.map(n => '`' + n + '`').join(', ') + '.');
+    }
+
+    const mc = kid(vr, 'multicast');
+    if (mc && txt(mc, 'enable') === 'yes') R.add('manual', area, '`' + name + '`: multicast da ricostruire nel logical router (struttura diversa nell\'ARE).', { xml: snippet(mc) });
+
+    const known = new Set(['interface', 'routing-table', 'ecmp', 'admin-dists', 'protocol', 'multicast']);
+    for (const c of kids(vr)) {
+      if (!known.has(c.tagName) && hasContent(c)) R.add('check', area, '`' + name + '`: elemento `' + c.tagName + '` non gestito, non copiato.', { xml: snippet(c, 2000) });
+    }
+    return lr;
+  }
+
+  function convertStaticRoute(ctx, r, vrName, fam) {
+    const { doc, R } = ctx;
+    const area = 'Routing';
+    const name = nameOf(r);
+    const label = '`' + vrName + '` / ' + (fam === 'ip' ? 'IPv4' : 'IPv6') + ' `' + name + '`';
+    const rt = firstChildTag(kid(r, 'route-table'));
+    if (rt === 'no-install' || rt === 'multicast') {
+      R.add('manual', area, label + ': route-table `' + rt + '` non esiste nell\'ARE, la route non è stata convertita.', { xml: snippet(r) });
+      return null;
+    }
+    const nhKind = firstChildTag(kid(r, 'nexthop'));
+    if (nhKind === 'receive') {
+      R.add('manual', area, label + ': next hop `receive` non esiste nell\'ARE, la route non è stata convertita.', { xml: snippet(r) });
+      return null;
+    }
+    const out = mk(doc, 'entry');
+    out.setAttribute('name', name);
+    copyLeaf(r, out, 'destination');
+    copyLeaf(r, out, 'interface');
+    copyLeaf(r, out, 'admin-dist');
+    copyLeaf(r, out, 'metric');
+    const nh = kid(r, 'nexthop');
+    if (nhKind) {
+      const k = nh.firstElementChild;
+      const onh = add(out, 'nexthop');
+      if (nhKind === 'next-vr') {
+        add(onh, 'next-lr', k.textContent.trim());
+        R.add('done', area, label + ': next hop `next-vr ' + k.textContent.trim() + '` diventato `next-lr`.');
+      } else if (nhKind === 'discard') add(onh, 'discard');
+      else add(onh, nhKind, k.textContent.trim());
+    }
+    const bfd = kid(r, 'bfd');
+    if (bfd && hasContent(bfd)) cloneTo(out, bfd);
+    const pm = kid(r, 'path-monitor');
+    if (pm && hasContent(pm)) cloneTo(out, pm);
+    if (rt === 'both') R.add('check', area, label + ': route-table `both`, convertita solo la parte unicast.');
+    void ctx;
+    return out;
+  }
+
+  // ------------------------------------------------------------------ BGP
+  function convertBGP(ctx, c) {
+    const { R } = ctx;
+    const { vr, vrName, lb, vrf, rp } = c;
+    const area = 'BGP';
+    const L = '`' + vrName + '`';
+    const ob = add(vrf, 'bgp');
+    for (const t of ['enable', 'router-id', 'local-as', 'install-route', 'enforce-first-as', 'ecmp-multi-as']) copyLeaf(lb, ob, t);
+    const gb = kid(lb, 'global-bfd');
+    if (hasContent(gb)) cloneTo(ob, gb);
+
+    const ro = kid(lb, 'routing-options');
+    if (ro) {
+      copyLeaf(ro, ob, 'default-local-preference');
+      const gr = kid(ro, 'graceful-restart');
+      if (hasContent(gr)) cloneTo(ob, gr);
+      const med = kid(ro, 'med');
+      if (hasContent(med)) cloneTo(ob, med);
+      if (txt(ro, 'confederation-member-as')) R.add('manual', area, L + ': confederazione BGP (`confederation-member-as`) da riconfigurare a mano.');
+      if (txt(ro, 'reflector-cluster-id')) R.add('manual', area, L + ': `reflector-cluster-id` da riconfigurare a mano.');
+      if (txt(ro, 'aggregate/aggregate-med') === 'yes') R.add('check', area, L + ': `aggregate-med` globale: nell\'ARE si imposta per ogni aggregato (`same-med`).');
+    }
+    if (txt(lb, 'enable') === 'yes' && txt(lb, 'reject-default-route') !== 'no') {
+      R.add('check', area, L + ': nel legacy Reject Default Route è attivo di default e scarta la default ricevuta dai peer. Nell\'ARE non c\'è questa opzione: se la default non deve entrare, filtrala con un filtering profile.');
+    }
+    if (txt(lb, 'allow-redist-default-route') === 'yes') R.add('check', area, L + ': `allow-redist-default-route` attivo: nell\'ARE la default si annuncia con una route map o `default-originate` nel profilo AF.');
+
+    const authMap = {};
+    for (const ap of all(lb, 'auth-profile/entry')) {
+      authMap[nameOf(ap)] = rp.copyNamed('bgp/auth-profile', ap);
+    }
+    if (Object.keys(authMap).length) R.add('done', area, L + ': profili di autenticazione spostati in `routing-profile/bgp/auth-profile` (' + Object.keys(authMap).map(k => '`' + k + '`').join(', ') + ').');
+    if (all(lb, 'dampening-profile/entry').length) R.add('manual', area, L + ': dampening profile con parametri diversi nell\'ARE (half-life, reuse, suppress): da ricreare.', { xml: snippet(kid(lb, 'dampening-profile')) });
+
+    let nPeers = 0;
+    for (const pg of all(lb, 'peer-group/entry')) {
+      const pgName = nameOf(pg);
+      const opg = ensureEnt(ensure(ob, 'peer-group'), pgName);
+      copyLeaf(pg, opg, 'enable');
+      const typeEl = kid(pg, 'type');
+      const tk = firstChildTag(typeEl) || 'ebgp';
+      const tsub = typeEl && typeEl.firstElementChild;
+      if (tk === 'ebgp' || tk === 'ibgp') add(add(opg, 'type'), tk);
+      else {
+        add(add(opg, 'type'), tk === 'ebgp-confed' ? 'ebgp' : 'ibgp');
+        R.add('manual', area, L + ' / peer group `' + pgName + '`: tipo `' + tk + '` (confederazione) impostato come ' + (tk === 'ebgp-confed' ? 'eBGP' : 'iBGP') + ', da rivedere.');
+      }
+      const af = { nhSelf: false, rmPriv: false, soft: txt(pg, 'soft-reset-with-stored-info') === 'yes' };
+      if (tsub) {
+        if (txt(tsub, 'export-nexthop') === 'use-self') af.nhSelf = true;
+        if (txt(tsub, 'remove-private-as') === 'yes') af.rmPriv = true;
+        if (txt(tsub, 'import-nexthop') === 'use-peer') R.add('check', area, L + ' / peer group `' + pgName + '`: `import-nexthop use-peer` non ha un equivalente diretto (serve una route map in ingresso).');
+      }
+      if (txt(pg, 'aggregated-confed-as-path') === 'yes') R.add('check', area, L + ' / peer group `' + pgName + '`: `aggregated-confed-as-path` non convertito.');
+
+      const peers = all(pg, 'peer/entry');
+      const v6 = peers.some(p => txt(p, 'address-family-identifier') === 'ipv6');
+      const v4 = peers.length === 0 || peers.some(p => txt(p, 'address-family-identifier') !== 'ipv6');
+      if (v4) {
+        const afName = rp.add('bgp/address-family-profile', 'af-ipv4' + (af.nhSelf ? '-nhself' : '') + (af.rmPriv ? '-nopriv' : '') + (af.soft ? '-soft' : ''), e => {
+          const u = ensure(e, 'ipv4/unicast');
+          add(u, 'enable', 'yes');
+          if (af.soft) add(u, 'soft-reconfig-with-stored-info', 'yes');
+          if (af.nhSelf) add(add(u, 'next-hop'), 'self');
+          if (af.rmPriv) add(add(u, 'remove-private-AS'), 'all');
+        });
+        setText(opg, 'address-family/ipv4', afName);
+      }
+      if (v6) R.add('manual', area, L + ' / peer group `' + pgName + '`: peer IPv6, serve un address family profile IPv6.');
+
+      for (const p of peers) {
+        nPeers++;
+        const pn = nameOf(p);
+        const PL = L + ' / peer `' + pn + '`';
+        const op = ensureEnt(ensure(opg, 'peer'), pn);
+        for (const t of ['enable', 'peer-as', 'enable-sender-side-loop-detection']) copyLeaf(p, op, t);
+        add(add(op, 'inherit'), 'yes');
+        const la = kid(p, 'local-address');
+        if (hasContent(la)) cloneTo(op, la);
+        const pa = kid(p, 'peer-address');
+        if (hasContent(pa)) cloneTo(op, pa);
+        const bfd = kid(p, 'bfd');
+        if (hasContent(bfd)) cloneTo(op, bfd);
+        const co = kid(p, 'connection-options');
+        if (co) {
+          const auth = txt(co, 'authentication');
+          if (auth) setText(op, 'connection-options/authentication', authMap[auth] || auth);
+          const mh = txt(co, 'multihop');
+          if (mh && mh !== '0') setText(op, 'connection-options/multihop', mh);
+          const tm = {
+            ka: txt(co, 'keep-alive-interval') || '30', ht: txt(co, 'hold-time') || '90',
+            mra: txt(co, 'min-route-adv-interval') || '30', odt: txt(co, 'open-delay-time') || '0',
+            rri: txt(co, 'idle-hold-time') || '15'
+          };
+          if (tm.ka !== '30' || tm.ht !== '90' || tm.mra !== '30' || tm.odt !== '0' || tm.rri !== '15') {
+            const tn = rp.add('bgp/timer-profile', 'bgp-timer-' + tm.ka + '-' + tm.ht, e => {
+              add(e, 'keep-alive-interval', tm.ka); add(e, 'hold-time', tm.ht);
+              add(e, 'min-route-adv-interval', tm.mra); add(e, 'open-delay-time', tm.odt);
+              add(e, 'reconnect-retry-interval', tm.rri);
+            });
+            setText(op, 'connection-options/timers', tn);
+            R.add('done', area, PL + ': timer convertiti nel timer profile `' + tn + '` (idle hold time → reconnect retry interval).');
+          }
+          const inc = kid(co, 'incoming-bgp-connection'), outc = kid(co, 'outgoing-bgp-connection');
+          if ((inc && (txt(inc, 'allow') === 'no' || (txt(inc, 'remote-port') || '0') !== '0')) || (outc && (txt(outc, 'allow') === 'no' || (txt(outc, 'local-port') || '0') !== '0'))) {
+            R.add('check', area, PL + ': restrizioni su connessioni BGP in ingresso/uscita (allow, porte) non convertite.');
+          }
+        }
+        const rc = txt(p, 'reflector-client');
+        if (rc && rc !== 'non-client') R.add('check', area, PL + ': route reflector client (`' + rc + '`): impostalo nel profilo AF del peer (`route-reflector-client`).');
+        const mp = txt(p, 'max-prefixes');
+        if (mp && mp !== '5000') R.add('check', area, PL + ': `max-prefixes ' + mp + '`: nell\'ARE si imposta come `maximum-prefix` nel profilo AF.');
+        if (txt(p, 'enable-mp-bgp') === 'yes') R.add('check', area, PL + ': MP-BGP attivo, verificare i profili AF.');
+        if (txt(p, 'subsequent-address-family-identifier/multicast') === 'yes') R.add('manual', area, PL + ': SAFI multicast da configurare con un profilo AF multicast.');
+      }
+    }
+    if (nPeers) R.add('done', area, L + ': convertiti ' + all(lb, 'peer-group/entry').length + ' peer group e ' + nPeers + ' peer; ai peer group IPv4 è applicato un address family profile con IPv4 unicast attivo.');
+
+    // policy
+    const pol = kid(lb, 'policy');
+    if (pol) {
+      for (const sec of ['import', 'export', 'conditional-advertisement']) {
+        const s = kid(pol, sec);
+        if (s && s.getElementsByTagName('entry').length) {
+          R.add('manual', area, L + ': policy BGP `' + sec + '` da ricreare con route map e filtering profile.', { xml: snippet(s) });
+        }
+      }
+      for (const a of all(pol, 'aggregation/address/entry')) {
+        const an = nameOf(a);
+        const complex = hasContent(kid(a, 'aggregate-route-attributes')) || hasContent(kid(a, 'suppress-filters')) || hasContent(kid(a, 'advertise-filters'));
+        if (complex) {
+          R.add('manual', area, L + ': aggregato `' + an + '` con attributi o filtri: da ricreare con route map.', { xml: snippet(a) });
+          continue;
+        }
+        const oa = ensureEnt(ensure(ob, 'aggregate-routes'), an);
+        copyLeaf(a, oa, 'enable');
+        if (txt(a, 'summary') === 'yes') add(oa, 'summary-only', 'yes');
+        if (txt(a, 'as-set') === 'yes') add(oa, 'as-set', 'yes');
+        const pfx = txt(a, 'prefix');
+        if (pfx) setText(oa, (pfx.includes(':') ? 'type/ipv6' : 'type/ipv4') + '/summary-prefix', pfx);
+        R.add('done', area, L + ': aggregato `' + an + '` convertito in aggregate route.');
+      }
+    }
+
+    // redistribuzione
+    const kinds = {};
+    const redistNotes = [];
+    for (const r of all(lb, 'redist-rules/entry')) {
+      const rn = nameOf(r);
+      if (txt(r, 'enable') === 'no') { R.add('info', area, L + ': redist rule `' + rn + '` disattivata, ignorata.'); continue; }
+      const attrs = ['set-origin', 'set-local-preference', 'set-as-path-limit', 'set-community', 'set-extended-community']
+        .filter(t => { const v = kid(r, t); return hasContent(v) && !(t === 'set-origin' && txt(v) === 'incomplete'); });
+      if (isPrefix(rn)) {
+        const fam = rn.includes(':') ? 'ipv6' : 'ipv4';
+        const n = ensureEnt(ensure(ob, 'advertise-network/' + fam + '/network'), rn);
+        add(n, 'unicast', 'yes');
+        R.add('check', area, L + ': redistribuzione del prefisso `' + rn + '` convertita in Advertise Network. Nell\'ARE il prefisso è annunciato solo se nella RIB esiste la route identica.' + (attrs.length ? ' Attributi non convertiti: ' + attrs.join(', ') + '.' : ''));
+        continue;
+      }
+      const prof = ent(at(vr, 'protocol/redist-profile'), rn);
+      const res = simpleRedist(prof);
+      if (!res.ok) {
+        R.add('manual', area, L + ': redist rule `' + rn + '`: ' + res.reason + ' Va ricreata con un redistribution profile e una route map.', { xml: snippet(r) + (prof ? '\n' + snippet(prof) : '') });
+        continue;
+      }
+      const metric = txt(r, 'set-med') || txt(r, 'metric');
+      for (const k of res.types) {
+        if (k === 'bgp') continue;
+        if (kinds[k] && kinds[k].metric !== metric) redistNotes.push(k);
+        kinds[k] = { metric };
+      }
+      if (attrs.length) R.add('check', area, L + ': redist rule `' + rn + '`: attributi ' + attrs.join(', ') + ' non convertiti (servono route map).');
+    }
+    if (Object.keys(kinds).length) {
+      const pn = rp.add('bgp/redistribution-profile', vrName + '-bgp-redist', e => {
+        const u = ensure(e, 'ipv4/unicast');
+        for (const k of ['static', 'connected', 'ospf', 'rip']) {
+          if (!kinds[k]) continue;
+          const x = add(u, k);
+          add(x, 'enable', 'yes');
+          if (kinds[k].metric) add(x, 'metric', kinds[k].metric);
+        }
+      });
+      setText(ob, 'redistribution-profile/ipv4/unicast', pn);
+      R.add('done', area, L + ': redistribuzione in BGP convertita nel profilo `' + pn + '` (' + Object.keys(kinds).join(', ') + ').');
+      if (redistNotes.length) R.add('check', area, L + ': più regole con metriche diverse per ' + redistNotes.join(', ') + ': tenuta l\'ultima.');
+    }
+  }
+
+  const REDIST_TYPE = { connect: 'connected', 'static': 'static', ospf: 'ospf', rip: 'rip', bgp: 'bgp' };
+  function simpleRedist(prof) {
+    if (!prof) return { ok: false, reason: 'redistribution profile non trovato.' };
+    if (!at(prof, 'action/redist')) return { ok: false, reason: 'il profilo ha azione `no-redist`.' };
+    const f = kid(prof, 'filter');
+    const types = members(kid(f, 'type'));
+    for (const t of ['interface', 'destination', 'nexthop']) if (members(kid(f, t)).length) return { ok: false, reason: 'il profilo filtra per `' + t + '`.' };
+    if (hasContent(kid(f, 'ospf')) || hasContent(kid(f, 'bgp'))) return { ok: false, reason: 'il profilo filtra per attributi OSPF/BGP.' };
+    if (!types.length) return { ok: false, reason: 'il profilo non indica il tipo di route.' };
+    return { ok: true, types: types.map(t => REDIST_TYPE[t] || t) };
+  }
+
+  // ------------------------------------------------------------------ OSPF
+  function ospfTimers(rp, el) {
+    const t = {
+      h: txt(el, 'hello-interval') || '10', d: txt(el, 'dead-counts') || '4', r: txt(el, 'retransmit-interval') || '5',
+      td: txt(el, 'transit-delay') || '1', gr: txt(el, 'gr-delay') || '10'
+    };
+    if (t.h === '10' && t.d === '4' && t.r === '5' && t.td === '1' && t.gr === '10') return null;
+    return rp.add('ospf/if-timer-profile', 'ospf-timer-' + t.h + '-' + t.d, e => {
+      add(e, 'hello-interval', t.h); add(e, 'dead-counts', t.d); add(e, 'retransmit-interval', t.r);
+      add(e, 'transit-delay', t.td); add(e, 'gr-delay', t.gr);
+    });
+  }
+
+  function convertOSPF(ctx, c) {
+    const { R } = ctx;
+    const { vr, vrName, lo, vrf, rp } = c;
+    const area = 'OSPF';
+    const L = '`' + vrName + '`';
+    const oo = add(vrf, 'ospf');
+    for (const t of ['enable', 'router-id', 'rfc1583']) copyLeaf(lo, oo, t);
+    const gb = kid(lo, 'global-bfd');
+    if (hasContent(gb)) cloneTo(oo, gb);
+    const gr = kid(lo, 'graceful-restart');
+    if (hasContent(gr)) cloneTo(oo, gr);
+    const tmr = kid(lo, 'timers');
+    if (tmr && ((txt(tmr, 'lsa-interval') || '5') !== '5' || (txt(tmr, 'spf-calculation-delay') || '5') !== '5')) {
+      R.add('check', area, L + ': timer SPF/LSA personalizzati (' + kids(tmr).map(x => x.tagName + '=' + x.textContent.trim()).join(', ') + '): crea un SPF timer profile.');
+    }
+    if (txt(lo, 'enable') === 'yes' && txt(lo, 'reject-default-route') === 'yes') {
+      R.add('check', area, L + ': nel legacy era attivo Reject Default Route (la default ricevuta via OSPF veniva scartata). Nell\'ARE non c\'è questa opzione: verifica il comportamento.');
+    }
+    if (txt(lo, 'allow-redist-default-route') === 'yes') R.add('check', area, L + ': `allow-redist-default-route`: nell\'ARE la default si annuncia dal redistribution profile (`default-route`).');
+
+    const authMap = {};
+    for (const ap of all(lo, 'auth-profile/entry')) authMap[nameOf(ap)] = rp.copyNamed('ospf/auth-profile', ap);
+    if (Object.keys(authMap).length) R.add('done', area, L + ': profili di autenticazione spostati in `routing-profile/ospf/auth-profile`.');
+
+    let nIf = 0;
+    for (const a of all(lo, 'area/entry')) {
+      const an = nameOf(a);
+      const oa = ensureEnt(ensure(oo, 'area'), an);
+      const tk = kid(a, 'type') && kid(a, 'type').firstElementChild;
+      const ot = add(oa, 'type');
+      if (!tk || tk.tagName === 'normal') add(ot, 'normal');
+      else if (tk.tagName === 'stub') {
+        const s = add(ot, 'stub');
+        if (txt(tk, 'accept-summary') === 'no') add(s, 'no-summary', 'yes');
+        const adv = at(tk, 'default-route/advertise');
+        if (adv) add(s, 'default-route-metric', txt(adv, 'metric') || '10');
+        else if (at(tk, 'default-route/disable')) R.add('check', area, L + ' / area `' + an + '`: stub senza default route: nell\'ARE l\'ABR la annuncia comunque.');
+      } else if (tk.tagName === 'nssa') {
+        const s = add(ot, 'nssa');
+        if (txt(tk, 'accept-summary') === 'no') add(s, 'no-summary', 'yes');
+        const adv = at(tk, 'default-route/advertise');
+        if (adv) {
+          const d = add(s, 'default-information-originate');
+          add(d, 'metric', txt(adv, 'metric') || '10');
+          add(d, 'metric-type', (txt(adv, 'type') || 'ext-2') === 'ext-1' ? 'type-1' : 'type-2');
+        }
+        for (const r of all(tk, 'nssa-ext-range/entry')) {
+          add(ensureEnt(ensure(s, 'abr/nssa-ext-range'), nameOf(r)), 'advertise', kid(r, 'suppress') ? 'no' : 'yes');
+        }
+      }
+      for (const r of all(a, 'range/entry')) add(ensureEnt(ensure(oa, 'range'), nameOf(r)), 'advertise', kid(r, 'suppress') ? 'no' : 'yes');
+      for (const i of all(a, 'interface/entry')) {
+        nIf++;
+        const oi = ensureEnt(ensure(oa, 'interface'), nameOf(i));
+        for (const t of ['enable', 'passive', 'metric', 'priority']) copyLeaf(i, oi, t);
+        const ltk = firstChildTag(kid(i, 'link-type'));
+        if (ltk) {
+          const olt = add(add(oi, 'link-type'), ltk);
+          if (ltk === 'p2mp') for (const nb of all(i, 'neighbor/entry')) ensureEnt(ensure(olt, 'neighbor'), nameOf(nb));
+        }
+        const au = txt(i, 'authentication');
+        if (au) add(oi, 'authentication', authMap[au] || au);
+        const bfd = kid(i, 'bfd');
+        if (hasContent(bfd)) cloneTo(oi, bfd);
+        const tn = ospfTimers(rp, i);
+        if (tn) add(oi, 'timing', tn);
+      }
+      for (const v of all(a, 'virtual-link/entry')) {
+        const ov = ensureEnt(ensure(oa, 'virtual-link'), nameOf(v));
+        for (const t of ['neighbor-id', 'transit-area-id', 'enable']) copyLeaf(v, ov, t);
+        const au = txt(v, 'authentication');
+        if (au) add(ov, 'authentication', authMap[au] || au);
+        const bfd = kid(v, 'bfd');
+        if (hasContent(bfd)) cloneTo(ov, bfd);
+        const tn = ospfTimers(rp, v);
+        if (tn) add(ov, 'timing', tn);
+      }
+    }
+    R.add('done', area, L + ': OSPF convertito (' + all(lo, 'area/entry').length + ' aree, ' + nIf + ' interfacce); i timer personalizzati sono diventati interface timer profile.');
+
+    // export rules -> redistribution profile
+    const kinds = {};
+    for (const r of all(lo, 'export-rules/entry')) {
+      const rn = nameOf(r);
+      const metric = txt(r, 'metric');
+      const mtype = (txt(r, 'new-path-type') || 'ext-2') === 'ext-1' ? 'type-1' : 'type-2';
+      if (txt(r, 'new-tag')) R.add('check', area, L + ': export rule `' + rn + '`: tag non convertito (serve una route map).');
+      if (rn === '0.0.0.0/0') { kinds['default-route'] = { metric, mtype }; continue; }
+      if (isPrefix(rn)) { R.add('manual', area, L + ': export rule per il prefisso `' + rn + '`: nell\'ARE serve un redistribution profile con route map.', { xml: snippet(r) }); continue; }
+      const prof = ent(at(vr, 'protocol/redist-profile'), rn);
+      const res = simpleRedist(prof);
+      if (!res.ok) {
+        R.add('manual', area, L + ': export rule `' + rn + '`: ' + res.reason + ' Va ricreata con un redistribution profile e una route map.', { xml: snippet(r) + (prof ? '\n' + snippet(prof) : '') });
+        continue;
+      }
+      for (const k of res.types) if (k !== 'ospf') kinds[k] = { metric, mtype };
+    }
+    if (Object.keys(kinds).length) {
+      const pn = rp.add('ospf/redistribution-profile', vrName + '-ospf-redist', e => {
+        for (const k of ['static', 'connected', 'bgp', 'rip', 'default-route']) {
+          if (!kinds[k]) continue;
+          const x = add(e, k);
+          add(x, 'enable', 'yes');
+          if (kinds[k].metric) add(x, 'metric', kinds[k].metric);
+          add(x, 'metric-type', kinds[k].mtype);
+        }
+      });
+      add(oo, 'redistribution-profile', pn);
+      R.add('done', area, L + ': export rule convertite nel redistribution profile `' + pn + '` (' + Object.keys(kinds).join(', ') + ').');
+    }
+  }
+
+  // ------------------------------------------------------------------ regola: interfacce
+  function nameRegex(keys) {
+    const escd = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).sort((a, b) => b.length - a.length);
+    return new RegExp('^(' + escd.join('|') + ')((?:\\.\\d+)?)$');
+  }
+  function underInterfaceTree(el) {
+    for (let n = el.parentNode; n && n.nodeType === 1; n = n.parentNode) {
+      if (n.tagName === 'interface' && n.parentNode && n.parentNode.tagName === 'network') return true;
+    }
+    return false;
+  }
+  function underNetwork(el) {
+    for (let n = el.parentNode; n && n.nodeType === 1; n = n.parentNode) if (n.tagName === 'network' && n.parentNode && n.parentNode.tagName === 'entry') return true;
+    return false;
+  }
+
+  function ruleInterfaces(ctx) {
+    const { dev, doc, R, opts, model } = ctx;
+    const area = 'Interfacce';
+    const inv = interfaceInventory(dev);
+    const map = opts.map || {};
+    const keepHA = ctx.keepHA;
+    // con l'HA del PA-500 le porte HA della sorgente vengono eliminate dalla regola HA: qui si ignorano
+    const skip = it => it.kind === 'ha-dedicated' ? !!keepHA : (keepHA && it.mode === 'ha');
+    const rename = {}, drop = [];
+    for (const it of inv) {
+      if (skip(it)) continue;
+      const t = map[it.key];
+      if (t === DROP) drop.push(it.key);
+      else if (t && t !== it.key) rename[it.key] = t;
+    }
+    // conflitti: due interfacce sulla stessa porta
+    const finalOf = new Map();
+    for (const it of inv) {
+      if (it.kind === 'ha-dedicated' || skip(it)) continue;
+      if (drop.includes(it.key)) continue;
+      const f = rename[it.key] || it.key;
+      if (!finalOf.has(f)) finalOf.set(f, []);
+      finalOf.get(f).push(it.key);
+    }
+    ctx.collisions = [];
+    for (const [f, srcs] of finalOf) {
+      if (srcs.length > 1) {
+        ctx.collisions.push(f);
+        R.add('error', area, 'Più interfacce finiscono su `' + f + '`: ' + srcs.map(s => '`' + s + '`').join(', ') + '. Assegna porte diverse.');
+      }
+    }
+
+    if (drop.length) dropInterfaces(ctx, drop);
+
+    const keys = Object.keys(rename);
+    if (keys.length) {
+      const re = nameRegex(keys);
+      let count = 0;
+      const odd = [];
+      const els = doc.documentElement.getElementsByTagName('*');
+      for (let i = 0; i < els.length; i++) {
+        const el = els[i];
+        const nm = el.getAttribute('name');
+        if (nm != null) {
+          const m = re.exec(nm);
+          if (m) {
+            el.setAttribute('name', rename[m[1]] + m[2]);
+            count++;
+            if (!underInterfaceTree(el) && !underNetwork(el)) odd.push(el);
+          }
+        }
+        if (!el.firstElementChild) {
+          const t = el.textContent.trim();
+          if (t) {
+            const m = re.exec(t);
+            if (m) { el.textContent = rename[m[1]] + m[2]; count++; }
+          }
+        }
+      }
+      R.add('done', area, 'Rinominate le interfacce (' + keys.map(k => '`' + k + '` → `' + rename[k] + '`').join(', ') + '): ' + count + ' riferimenti aggiornati, sub-interfacce comprese.');
+      for (const el of odd) R.add('check', area, 'Rinominato anche un oggetto che ha il nome di un\'interfaccia: ' + humanPath(el) + '.');
+    }
+    ctx.rename = rename;
+    ctx.drop = drop;
+    void model;
+  }
+
+  function dropInterfaces(ctx, keys) {
+    const { dev, doc, R } = ctx;
+    const area = 'Interfacce';
+    const re = nameRegex(keys);
+    const removed = [];
+    // definizioni e voci con il nome dell'interfaccia sotto network (DHCP, QoS, OSPF, ...)
+    const entries = Array.from(doc.documentElement.getElementsByTagName('entry'));
+    for (const e of entries) {
+      const nm = e.getAttribute('name');
+      if (nm == null || !re.test(nm) || !e.parentNode) continue;
+      if (!underNetwork(e) && !underInterfaceTree(e)) continue;
+      let inside = false;
+      for (let p = e.parentNode; p && p.nodeType === 1; p = p.parentNode) if (p.tagName === 'entry' && re.test(p.getAttribute('name') || '')) { inside = true; break; }
+      if (!inside && !underInterfaceTree(e)) removed.push(humanPath(e));
+      detach(e);
+    }
+    let nMembers = 0;
+    for (const m of Array.from(doc.documentElement.getElementsByTagName('member'))) {
+      if (re.test(m.textContent.trim())) { detach(m); nMembers++; }
+    }
+    for (const g of Array.from(doc.documentElement.getElementsByTagName('aggregate-group'))) {
+      if (re.test(g.textContent.trim())) {
+        const eth = g.parentNode;
+        detach(g);
+        R.add('check', area, '`' + nameOf(eth) + '` era membro di un\'aggregata esclusa: ora non è configurata.');
+      }
+    }
+    R.add('done', area, 'Escluse ' + keys.map(k => '`' + k + '`').join(', ') + ': rimosse le definizioni e ' + nMembers + ' riferimenti in liste (zone, router, ...).');
+    for (const p of removed) R.add('check', area, 'Rimossa anche la voce ' + p + '.');
+    const left = [];
+    const els = doc.documentElement.getElementsByTagName('*');
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      if (!el.firstElementChild && re.test(el.textContent.trim())) left.push(el);
+    }
+    for (const el of left) R.add('error', area, 'Riferimento a un\'interfaccia esclusa in ' + humanPath(el) + ' (`' + el.textContent.trim() + '`): correggilo o assegna una porta invece di escluderla.', { xpath: xpathOf(el) });
+    void dev;
+  }
+
+  // ------------------------------------------------------------------ regola: HA
+  function ruleHA(ctx) {
+    const { dev, R, opts } = ctx;
+    const area = 'HA';
+    const haEl = at(dev, 'deviceconfig/high-availability');
+    const keepHA = ctx.keepHA;
+    if (keepHA) {
+      const tha = at(ctx.tdev, 'deviceconfig/high-availability');
+      if (haEl) detach(haEl);
+      if (tha) {
+        cloneTo(ensure(dev, 'deviceconfig'), tha);
+        R.add('done', area, 'Configurazione HA presa dal PA-500 (' + (txt(tha, 'enabled') === 'yes' ? 'HA attivo' : 'HA non attivo') + ').');
+      } else {
+        R.add('info', area, 'Il PA-500 non ha configurazione HA: rimossa quella della sorgente.');
+      }
+    } else if (haEl && txt(haEl, 'enabled') === 'yes') {
+      R.add('check', area, 'HA attivo nella sorgente: peer, priority e IP HA sono quelli del nodo esportato. Carica la config sul nodo corrispondente e verifica gli indirizzi.');
+    }
+    const ha = at(dev, 'deviceconfig/high-availability');
+    if (!ha) return;
+    const used = new Set();
+    for (const s of HA_SECTIONS) {
+      const portEl = at(ha, 'interface/' + s + '/port');
+      if (!portEl) continue;
+      const p = portEl.textContent.trim();
+      if (!p) continue;
+      if (p === MGMT) {
+        if (s === 'ha1' || s === 'ha1-backup') continue;
+        R.add('error', area, '`' + s + '` non può usare la porta di management.');
+        continue;
+      }
+      if (DEDICATED_HA.test(p)) {
+        R.add('error', area, '`' + s + '` usa la porta HA dedicata `' + p + '`, che sui PA-500 non esiste: assegnale una porta dati o la management nella tabella delle porte.');
+        continue;
+      }
+      used.add(p);
+      ensureHaInterface(ctx, p, s);
+    }
+    // interfacce in modalità HA non più usate
+    for (const e of all(dev, 'network/interface/ethernet/entry')) {
+      if (kid(e, 'ha') && !used.has(nameOf(e))) {
+        detach(e);
+        R.add('done', area, '`' + nameOf(e) + '` era in modalità HA ma non è usata dalla configurazione HA finale: rimossa.');
+      }
+    }
+  }
+
+  function ensureHaInterface(ctx, port, section) {
+    const { dev, R } = ctx;
+    const isAe = /^ae\d+$/.test(port);
+    const container = ensure(dev, 'network/interface/' + (isAe ? 'aggregate-ethernet' : 'ethernet'));
+    let e = ent(container, port);
+    const tEnt = ctx.tdev && ent(at(ctx.tdev, 'network/interface/' + (isAe ? 'aggregate-ethernet' : 'ethernet')), port);
+    if (e) {
+      const mode = ifMode(e);
+      if (mode === 'ha') return;
+      if (mode) {
+        R.add('error', 'HA', 'La porta `' + port + '` serve a `' + section + '` ma nella config è già in modalità `' + mode + '`: scegli un\'altra porta per l\'una o per l\'altra.');
+        return;
+      }
+      add(e, 'ha');
+    } else if (tEnt && kid(tEnt, 'ha')) {
+      cloneTo(container, tEnt);
+    } else {
+      e = add(container, 'entry');
+      e.setAttribute('name', port);
+      add(e, 'ha');
+    }
+    R.add('done', 'HA', '`' + port + '` impostata in modalità HA per `' + section + '`.');
+  }
+
+  // ------------------------------------------------------------------ regole: management, admin
+  const MGMT_TAGS = ['hostname', 'ip-address', 'netmask', 'default-gateway', 'ipv6-address', 'ipv6-default-gateway', 'type', 'speed-duplex', 'mtu'];
+  function ruleKeepMgmt(ctx) {
+    const { dev, R } = ctx;
+    const tsys = at(ctx.tdev, 'deviceconfig/system');
+    if (!tsys) { R.add('check', 'Management', 'La config del PA-500 non ha `deviceconfig/system`: management lasciato come nella sorgente.'); return; }
+    const sys = ensure(dev, 'deviceconfig/system');
+    for (const t of MGMT_TAGS) {
+      const cur = kid(sys, t);
+      if (cur) detach(cur);
+      const tv = kid(tsys, t);
+      if (tv) cloneTo(sys, tv);
+    }
+    R.add('done', 'Management', 'Hostname e IP di management presi dal PA-500: `' + (txt(tsys, 'hostname') || '?') + '`, `' + (txt(tsys, 'ip-address') || (kid(at(tsys, 'type'), 'dhcp-client') ? 'DHCP' : '?')) + '`.');
+  }
+  function ruleKeepAdmins(ctx) {
+    const { doc, R } = ctx;
+    const tm = at(ctx.tdoc.documentElement, 'mgt-config');
+    const cur = at(doc.documentElement, 'mgt-config');
+    if (!tm) { R.add('check', 'Management', 'La config del PA-500 non ha `mgt-config`: amministratori lasciati come nella sorgente.'); return; }
+    const imported = doc.importNode(tm, true);
+    if (cur) doc.documentElement.replaceChild(imported, cur);
+    else doc.documentElement.appendChild(imported);
+    R.add('done', 'Management', 'Amministratori e password presi dal PA-500 (' + all(tm, 'users/entry').map(nameOf).join(', ') + ').');
+  }
+
+  // ------------------------------------------------------------------ regola: PoE e verifiche di piattaforma
+  function rulePoE(ctx) {
+    const { dev, R, model } = ctx;
+    for (const e of all(dev, 'network/interface/ethernet/entry')) {
+      const poe = kid(e, 'poe');
+      if (!poe) continue;
+      const p = model.byName.get(nameOf(e));
+      if (!p || !p.poe) {
+        detach(poe);
+        R.add('done', 'Interfacce', '`' + nameOf(e) + '`: rimosse le impostazioni PoE (porta senza PoE sul ' + model.id + ').');
+      }
+    }
+  }
+
+  function platformChecks(ctx) {
+    const { dev, doc, R, model } = ctx;
+    const area = 'Piattaforma';
+    const ver = (doc.documentElement.getAttribute('version') || '').split('.').map(Number);
+    if (ver.length >= 2 && (ver[0] < 10 || (ver[0] === 10 && ver[1] < 2))) {
+      R.add('check', area, 'La sorgente è PAN-OS ' + doc.documentElement.getAttribute('version') + ', precedente all\'Advanced Routing (10.2). Al caricamento PAN-OS migra lo schema: se validate segnala errori sulla parte di routing, usa il caricamento parziale oppure porta prima la config su una release 10.2 o successiva.');
+    }
+    const vs = all(dev, 'vsys/entry');
+    if (vs.length > 1) R.add('check', area, 'La config ha ' + vs.length + ' virtual system (' + vs.map(nameOf).join(', ') + '): verifica che il ' + model.id + ' supporti il multi-vsys e abbia la licenza.');
+    if (at(dev, 'deviceconfig/system/panorama') || at(dev, 'deviceconfig/system/panorama-server')) {
+      R.add('check', area, 'Il firewall era gestito da Panorama: l\'export contiene solo la config locale. Se usava template o device group, parti dalla config merged (`show config merged`) oppure adegua anche template e device group.');
+    }
+
+    const ports = new Set();
+    for (const e of all(dev, 'network/interface/ethernet/entry')) {
+      const n = nameOf(e);
+      ports.add(n);
+      const p = model.byName.get(n);
+      if (!p) {
+        R.add('error', 'Interfacce', 'La porta `' + n + '` non esiste sul ' + model.id + ': assegnala a una porta del pannello o escludila.');
+        continue;
+      }
+      const ls = txt(e, 'link-speed');
+      if (ls && /^\d+$/.test(ls) && +ls > p.speed) R.add('error', 'Interfacce', '`' + n + '` ha velocità ' + ls + ' Mbps ma la porta è ' + p.type + ' (max ' + p.speed + '): imposta `auto` o un valore supportato.');
+      if (kid(e, 'log-card')) R.add('error', 'Interfacce', '`' + n + '` è in modalità log-card, che esiste solo sui PA-7000.');
+      if (txt(e, 'layer3/cluster-interconnect') === 'yes' || txt(e, 'layer3/traffic-interconnect') === 'yes') R.add('check', 'Interfacce', '`' + n + '` ha impostazioni di cluster (PA-7500), da togliere.');
+      if (at(e, 'layer3/sdwan-link-settings/enable') && txt(e, 'layer3/sdwan-link-settings/enable') === 'yes') R.add('info', 'Interfacce', '`' + n + '`: SD-WAN attivo, richiede plugin e licenza sul PA-500.');
+    }
+    // aggregate con porte di tipo diverso
+    const aeTypes = new Map();
+    for (const e of all(dev, 'network/interface/ethernet/entry')) {
+      const g = txt(e, 'aggregate-group');
+      const p = model.byName.get(nameOf(e));
+      if (!g || !p) continue;
+      if (!aeTypes.has(g)) aeTypes.set(g, new Set());
+      aeTypes.get(g).add(p.type + ' ' + p.speed);
+    }
+    for (const [g, types] of aeTypes) if (types.size > 1) R.add('check', 'Interfacce', 'I membri di `' + g + '` sono su porte di tipo diverso (' + [...types].join(', ') + '): l\'aggregata richiede porte uguali.');
+    // cellulare
+    for (const c of kids(at(dev, 'network/interface'))) {
+      for (const e of kids(c, 'entry')) {
+        const n = nameOf(e) || '';
+        if (/^cellular\d+\/\d+$/.test(n) && !model.cellular.includes(n)) R.add('error', 'Interfacce', 'L\'interfaccia `' + n + '` esiste solo sui modelli 5G: escludila.');
+      }
+    }
+    ctx.finalPorts = ports;
+  }
+
+  function finalScan(ctx) {
+    const { doc, R } = ctx;
+    const els = doc.documentElement.getElementsByTagName('*');
+    const seen = new Set();
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      if (el.tagName !== 'virtual-router' && el.tagName !== 'next-vr') continue;
+      const p = humanPath(el);
+      if (seen.has(p)) continue;
+      seen.add(p);
+      R.add('check', 'Routing', 'Riferimento residuo a `' + el.tagName + '` in ' + p + '.', { xpath: xpathOf(el), xml: snippet(el, 1500) });
+    }
+  }
+
+  // ------------------------------------------------------------------ conteggi
+  const COUNTERS = [
+    ['Zone', 'devices/entry/vsys/entry/zone/entry'],
+    ['Regole di sicurezza', 'devices/entry/vsys/entry/rulebase/security/rules/entry'],
+    ['Regole NAT', 'devices/entry/vsys/entry/rulebase/nat/rules/entry'],
+    ['Regole di decryption', 'devices/entry/vsys/entry/rulebase/decryption/rules/entry'],
+    ['Regole PBF', 'devices/entry/vsys/entry/rulebase/pbf/rules/entry'],
+    ['Oggetti indirizzo', 'devices/entry/vsys/entry/address/entry', 'shared/address/entry'],
+    ['Gruppi di indirizzi', 'devices/entry/vsys/entry/address-group/entry', 'shared/address-group/entry'],
+    ['Servizi', 'devices/entry/vsys/entry/service/entry', 'shared/service/entry'],
+    ['Gruppi di servizi', 'devices/entry/vsys/entry/service-group/entry', 'shared/service-group/entry'],
+    ['Logical router', 'devices/entry/network/logical-router/entry'],
+    ['Static route', 'devices/entry/network/logical-router/entry/vrf/entry/routing-table/ip/static-route/entry', 'devices/entry/network/logical-router/entry/vrf/entry/routing-table/ipv6/static-route/entry'],
+    ['Porte fisiche configurate', 'devices/entry/network/interface/ethernet/entry'],
+    ['Sub-interfacce', 'devices/entry/network/interface/ethernet/entry/layer3/units/entry', 'devices/entry/network/interface/ethernet/entry/layer2/units/entry', 'devices/entry/network/interface/aggregate-ethernet/entry/layer3/units/entry', 'devices/entry/network/interface/aggregate-ethernet/entry/layer2/units/entry'],
+    ['Interfacce aggregate', 'devices/entry/network/interface/aggregate-ethernet/entry'],
+    ['Interfacce VLAN', 'devices/entry/network/interface/vlan/units/entry'],
+    ['Interfacce tunnel', 'devices/entry/network/interface/tunnel/units/entry'],
+    ['Loopback', 'devices/entry/network/interface/loopback/units/entry'],
+    ['IKE gateway', 'devices/entry/network/ike/gateway/entry'],
+    ['Tunnel IPsec', 'devices/entry/network/tunnel/ipsec/entry'],
+    ['GlobalProtect gateway', 'devices/entry/vsys/entry/global-protect/global-protect-gateway/entry'],
+    ['GlobalProtect portal', 'devices/entry/vsys/entry/global-protect/global-protect-portal/entry']
+  ];
+  function counts(doc) {
+    const r = doc.documentElement;
+    return COUNTERS.map(([label, ...paths]) => ({ label, value: paths.reduce((s, p) => s + all(r, p).length, 0) }));
+  }
+
+  // ------------------------------------------------------------------ regole personalizzate
+  function applyCustomRules(doc, rules, R) {
+    const hits = {};
+    for (const rule of rules || []) {
+      if (!rule || rule.enabled === false || !rule.xpath) continue;
+      const label = '«' + (rule.desc || rule.xpath) + '»';
+      let nodes;
+      try { nodes = evalXPath(doc, rule.xpath); }
+      catch (e) {
+        hits[rule.id] = -1;
+        R.add('error', 'Regole personalizzate', 'Regola ' + label + ': XPath non valido (' + (e.message || e) + ').');
+        continue;
+      }
+      hits[rule.id] = nodes.length;
+      if (!nodes.length) continue;
+      let n = 0;
+      for (const node of nodes) {
+        try {
+          if (rule.action === 'remove') {
+            if (node.nodeType === 2) node.ownerElement.removeAttributeNode(node);
+            else detach(node);
+            n++;
+          } else if (rule.action === 'set') {
+            if (node.nodeType === 1) { while (node.firstChild) node.removeChild(node.firstChild); node.textContent = rule.value || ''; n++; }
+            else { node.nodeValue = rule.value || ''; n++; }
+          } else if (rule.action === 'rename') {
+            if (node.nodeType !== 1 || !/^[A-Za-z_][\w.\-]*$/.test(rule.value || '')) continue;
+            const nn = doc.createElement(rule.value);
+            for (const a of Array.from(node.attributes)) nn.setAttribute(a.name, a.value);
+            while (node.firstChild) nn.appendChild(node.firstChild);
+            node.parentNode.replaceChild(nn, node);
+            n++;
+          } else if (rule.action === 'replace') {
+            const re = new RegExp(rule.pattern || '', 'g');
+            const target = node.nodeType === 1 ? (node.firstElementChild ? null : node) : node;
+            if (!target) continue;
+            const before = target.textContent;
+            const after = before.replace(re, rule.value || '');
+            if (after !== before) { target.textContent = after; n++; }
+          } else if (rule.action === 'report') {
+            R.add('check', 'Regole personalizzate', 'Regola ' + label + ': trovato ' + humanPath(node.nodeType === 1 ? node : node.parentNode || node.ownerElement) + '.', { xpath: xpathOf(node) });
+            n++;
+          }
+        } catch (e) {
+          R.add('error', 'Regole personalizzate', 'Regola ' + label + ': ' + (e.message || e));
+        }
+      }
+      const verb = { remove: n === 1 ? 'rimosso' : 'rimossi', set: n === 1 ? 'impostato' : 'impostati', rename: n === 1 ? 'rinominato' : 'rinominati', replace: n === 1 ? 'modificato' : 'modificati' }[rule.action];
+      if (verb) R.add('done', 'Regole personalizzate', 'Regola ' + label + ': ' + n + (n === 1 ? ' nodo ' : ' nodi ') + verb + '.');
+    }
+    return hits;
+  }
+
+  // ------------------------------------------------------------------ errori di commit
+  function parseCommitErrors(text) {
+    const out = [];
+    for (const raw0 of String(text || '').split(/\r?\n/)) {
+      const raw = raw0.trim();
+      if (!raw) continue;
+      let l = raw.replace(/\s*(?:→|›|=>)\s*/g, ' -> ')
+        .replace(/^[-•*]\s*/, '')
+        .replace(/^(validation error|error|errore|warning|details?)\s*:\s*/i, '').trim();
+      if (!/\s->\s|->/.test(l)) { out.push({ raw, parsed: false }); continue; }
+      const segs = l.split(/\s*->\s*/).map(s => s.trim()).filter(s => s !== '');
+      const last = segs.pop() || '';
+      out.push({ raw, parsed: true, segs, last });
+    }
+    return out;
+  }
+
+  function walkTokens(doc, toks) {
+    const r = doc.documentElement;
+    let starts;
+    if (toks[0] === 'config') starts = [r];
+    else {
+      starts = Array.from(r.getElementsByTagName(toks[0]));
+      if (r.tagName === toks[0]) starts.unshift(r);
+      if (!starts.length) starts = Array.from(r.getElementsByTagName('entry')).filter(e => e.getAttribute('name') === toks[0]);
+    }
+    const res = [];
+    for (const s of starts) {
+      let cur = [s];
+      for (let i = 1; i < toks.length && cur.length; i++) {
+        const t = toks[i], nxt = [];
+        for (const c of cur) {
+          const byTag = kids(c, t);
+          if (byTag.length) nxt.push(...byTag);
+          else { const e = ent(c, t); if (e) nxt.push(e); }
+        }
+        cur = nxt;
+      }
+      for (const c of cur) if (!res.includes(c)) res.push(c);
+    }
+    return res;
+  }
+
+  /** Trova i nodi a cui si riferisce un errore di commit e propone le correzioni. */
+  function resolveError(doc, e) {
+    if (!e.parsed) return Object.assign({ nodes: [], msg: e.raw, actions: [] }, e);
+    const words = e.last.split(/\s+/);
+    let found = null;
+    for (let k = 1; k <= Math.min(words.length, 8) && !found; k++) {
+      const toks = e.segs.concat([words.slice(0, k).join(' ')]);
+      const nodes = walkTokens(doc, toks);
+      if (nodes.length) found = { nodes, msg: words.slice(k).join(' '), toks };
+    }
+    if (!found) return Object.assign({ nodes: [], msg: e.last, actions: [] }, e);
+    const ref = /'([^']+)'\s+is not (?:a valid reference|an allowed keyword|a valid value|valid)/i.exec(found.msg);
+    const actions = [];
+    const union = nodes => nodes.map(n => xpathOf(n)).join(' | ');
+    const unionG = nodes => [...new Set(nodes.map(n => xpathOf(n, true)))].join(' | ');
+    if (ref) {
+      const refNodes = [];
+      for (const n of found.nodes) {
+        const ms = kids(n, 'member').filter(m => m.textContent.trim() === ref[1]);
+        if (ms.length) refNodes.push(...ms);
+        else if (!n.firstElementChild && n.textContent.trim() === ref[1]) refNodes.push(n);
+      }
+      // l'elemento c'è ma il valore segnalato no: l'errore è già stato risolto
+      if (!refNodes.length) return Object.assign({}, e, { nodes: [], msg: found.msg, actions: [], ref: ref[1], refGone: true });
+      actions.push({ label: 'Rimuovi il riferimento \'' + ref[1] + '\'', action: 'remove', xpath: union(refNodes), generic: unionG(refNodes), nodes: refNodes });
+    }
+    const tag = found.nodes[0].tagName;
+    const low = (found.msg || '').toLowerCase();
+    // per vincoli e elementi mancanti togliere il nodo peggiorerebbe le cose: si propone solo la segnalazione
+    if (!low.includes('constraints failed') && !low.includes('is missing')) {
+      actions.push({ label: 'Rimuovi <' + tag + (found.nodes[0].getAttribute('name') ? ' ' + found.nodes[0].getAttribute('name') : '') + '>' + (found.nodes.length > 1 ? ' (' + found.nodes.length + ' nodi)' : ''), action: 'remove', xpath: union(found.nodes), generic: unionG(found.nodes), nodes: found.nodes });
+    }
+    actions.push({ label: 'Segnala soltanto', action: 'report', xpath: union(found.nodes), generic: unionG(found.nodes), nodes: found.nodes });
+    return Object.assign({}, e, found, { ref: ref ? ref[1] : null, actions, hint: errorHint(found.msg, tag) });
+  }
+
+  function errorHint(msg, tag) {
+    const m = (msg || '').toLowerCase();
+    if (m.includes('advanced routing')) return 'Il PA-500 non accetta advance-routing = no: carica la config convertita da questa pagina, dove la regola Advanced Routing lo imposta a yes.';
+    if (m.includes('is unexpected')) return 'Elemento che questa versione o questa piattaforma non accetta: di solito si rimuove.';
+    if (m.includes('not a valid reference')) return 'Riferimento a un oggetto che non esiste nella config: rimuovi il riferimento oppure crea l\'oggetto.';
+    if (m.includes('not an allowed keyword') || m.includes('is invalid')) return 'Valore non accettato: correggilo con una regola «imposta valore» o rimuovi l\'elemento.';
+    if (m.includes('constraints failed')) return 'Vincolo della piattaforma: leggi il messaggio, spesso indica l\'impostazione da cambiare.';
+    if (m.includes('is missing')) return 'Manca un elemento obbligatorio: va aggiunto a mano.';
+    if (tag === 'virtual-router') return 'Configurazione del motore legacy: con la regola Advanced Routing attiva viene convertita.';
+    return '';
+  }
+
+  // ------------------------------------------------------------------ esecuzione
+  function run(srcDoc, opts, tgtDoc) {
+    const t0 = Date.now();
+    const R = new Report();
+    const doc = srcDoc.cloneNode(true);
+    const model = getModel(opts.model, opts.customPorts);
+    const devs = all(doc.documentElement, 'devices/entry');
+    const tdevs = tgtDoc ? all(tgtDoc.documentElement, 'devices/entry') : [];
+    const ctxs = [];
+    for (const dev of devs) {
+      const tdev = tdevs.find(t => nameOf(t) === nameOf(dev)) || tdevs[0] || null;
+      // l'HA del PA-500 si usa solo se il PA-500 ne ha davvero una
+      const tha = tdev && at(tdev, 'deviceconfig/high-availability');
+      const tgtHasHA = !!tha && (txt(tha, 'enabled') === 'yes' || HA_SECTIONS.some(s => !!txt(tha, 'interface/' + s + '/port')));
+      const keepHA = !!(opts.rules.ha && opts.rules.keepHA && tgtHasHA);
+      const ctx = { doc, dev, R, opts, model, tdev, tdoc: tgtDoc, keepHA };
+      ctxs.push(ctx);
+      if (keepHA) detach(at(dev, 'deviceconfig/high-availability'));
+      else if (opts.rules.ha && opts.rules.keepHA && tdev) R.add('info', 'HA', 'Il PA-500 caricato non ha configurazione HA: uso quella della sorgente con le porte della tabella.');
+      if (opts.rules.are) ruleARE(ctx);
+      if (opts.rules.ifaces) ruleInterfaces(ctx);
+      if (opts.rules.ha) ruleHA(ctx);
+      if (opts.rules.poe) rulePoE(ctx);
+      if (tdev && opts.rules.keepMgmt) ruleKeepMgmt(ctx);
+      platformChecks(ctx);
+      if (tdev && all(tdev, 'network/logical-router/entry').length) {
+        R.add('check', 'Routing', 'Il PA-500 ha già ' + all(tdev, 'network/logical-router/entry').length + ' logical router: con il caricamento completo vengono sostituiti da quelli convertiti.');
+      }
+    }
+    if (tgtDoc && opts.rules.keepAdmins && ctxs.length) ruleKeepAdmins(ctxs[0]);
+    const ruleHits = applyCustomRules(doc, opts.customRules, R);
+    if (ctxs.length) finalScan(ctxs[0]);
+
+    // stato delle porte per il pannello
+    const ports = {};
+    const rename = ctxs[0] ? ctxs[0].rename || {} : {};
+    const back = {};
+    for (const [k, v] of Object.entries(rename)) back[v] = k;
+    const dev0 = devs[0];
+    if (dev0) {
+      const haPorts = new Map();
+      for (const s of HA_SECTIONS) {
+        const p = txt(dev0, 'deviceconfig/high-availability/interface/' + s + '/port');
+        if (p) { if (!haPorts.has(p)) haPorts.set(p, []); haPorts.get(p).push(s); }
+      }
+      for (const e of all(dev0, 'network/interface/ethernet/entry')) {
+        const n = nameOf(e);
+        ports[n] = {
+          source: back[n] || n, mode: ifMode(e), ha: haPorts.get(n) || null,
+          ae: txt(e, 'aggregate-group'), units: unitNames(e).length,
+          exists: model.byName.has(n), collision: !!(ctxs[0].collisions && ctxs[0].collisions.includes(n))
+        };
+      }
+    }
+    const mgmtHa = dev0 ? HA_SECTIONS.filter(s => txt(dev0, 'deviceconfig/high-availability/interface/' + s + '/port') === MGMT) : [];
+    const stats = { error: 0, manual: 0, check: 0, done: 0, info: 0 };
+    for (const it of R.items) stats[it.level]++;
+    return { doc, report: R.items, stats, counts: counts(doc), ruleHits, ports, mgmtHa, model, ms: Date.now() - t0 };
+  }
+
+  /** Comandi CLI per caricare il file sul PA-500. */
+  function loadCommands(fileName, devName) {
+    const d = devName || 'localhost.localdomain';
+    const f = fileName || 'config-pa500.xml';
+    const base = "devices/entry[@name='" + d + "']";
+    return {
+      full: ['configure', 'load config from ' + f, 'validate full'].join('\n'),
+      partial: [
+        'configure',
+        'load config partial mode replace from-xpath shared to-xpath /config/shared from ' + f,
+        'load config partial mode replace from-xpath ' + base + '/network to-xpath /config/' + base + '/network from ' + f,
+        'load config partial mode replace from-xpath ' + base + '/vsys to-xpath /config/' + base + '/vsys from ' + f,
+        'set deviceconfig setting advance-routing yes',
+        'validate full'
+      ].join('\n')
+    };
+  }
+
+  // ------------------------------------------------------------------ device state (.tgz)
+  async function extractRunningConfig(buffer) {
+    let bytes = new Uint8Array(buffer);
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+      if (typeof root.DecompressionStream === 'undefined') throw new Error('Questo browser non sa decomprimere il .tgz: estrai running-config.xml dall\'archivio e caricalo.');
+      const ds = new root.DecompressionStream('gzip');
+      const stream = new root.Blob([bytes]).stream().pipeThrough(ds);
+      bytes = new Uint8Array(await new root.Response(stream).arrayBuffer());
+    }
+    const dec = new root.TextDecoder('utf-8');
+    const names = [];
+    let off = 0;
+    let longName = null;
+    while (off + 512 <= bytes.length) {
+      const h = bytes.subarray(off, off + 512);
+      if (h.every(b => b === 0)) break;
+      const str = (a, b) => dec.decode(h.subarray(a, b)).replace(/\0.*$/s, '');
+      let name = str(0, 100);
+      const prefix = str(345, 500);
+      if (prefix && str(257, 263).startsWith('ustar')) name = prefix + '/' + name;
+      const size = parseInt(str(124, 136).trim() || '0', 8) || 0;
+      const type = String.fromCharCode(h[156] || 48);
+      const dataStart = off + 512;
+      if (type === 'L') {
+        longName = dec.decode(bytes.subarray(dataStart, dataStart + size)).replace(/\0.*$/s, '');
+      } else {
+        if (longName) { name = longName; longName = null; }
+        if (type === '0' || type === '\0') {
+          names.push(name);
+          if (/(^|\/)running-config\.xml$/.test(name)) return { name, text: dec.decode(bytes.subarray(dataStart, dataStart + size)) };
+        }
+      }
+      off = dataStart + Math.ceil(size / 512) * 512;
+    }
+    throw new Error('Nell\'archivio non c\'è running-config.xml' + (names.length ? ' (contiene: ' + names.slice(0, 8).join(', ') + (names.length > 8 ? ', ...' : '') + ').' : '.'));
+  }
+
+  root.PA500 = {
+    DROP, MGMT, MODELS, getModel, parseCustomPorts, parse, analyze, defaultMap, run, serialize, snippet,
+    parseCommitErrors, resolveError, evalXPath, xpathOf, humanPath, loadCommands, extractRunningConfig, interfaceInventory
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const E = window.PA500;
+  const KEY = 'pa500-adapter.v1';
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+
+  function h(tag, attrs, ...children) {
+    const el = document.createElement(tag);
+    if (attrs) {
+      for (const [k, v] of Object.entries(attrs)) {
+        if (v == null || v === false) continue;
+        if (k === 'class') el.className = v;
+        else if (k === 'dataset') Object.assign(el.dataset, v);
+        else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+        else if (v === true) el.setAttribute(k, '');
+        else el.setAttribute(k, v);
+      }
+    }
+    for (const c of children.flat(Infinity)) {
+      if (c == null || c === false) continue;
+      el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+    }
+    return el;
+  }
+  function rich(msg) {
+    const frag = document.createDocumentFragment();
+    String(msg).split(/`([^`]*)`/).forEach((p, i) => frag.appendChild(i % 2 ? h('code', null, p) : document.createTextNode(p)));
+    return frag;
+  }
+  function uid() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function speedLabel(mbps) { return mbps >= 1000 ? (mbps / 1000).toString().replace('.', ',') + 'G' : mbps + 'M'; }
+  let toastTimer = null;
+  function toast(text) {
+    const t = $('#toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  // ------------------------------------------------------------------ stato
+  function loadSaved() { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } }
+  const saved = loadSaved();
+  const S = {
+    src: null, tgt: null,
+    model: saved.model || 'PA-550',
+    customPorts: saved.customPorts || '1-8 rj45',
+    map: {}, sel: null,
+    rules: Object.assign({ are: true, dyn: true, ifaces: true, ha: true, keepHA: true, poe: true, keepMgmt: true, keepAdmins: false }, saved.rules || {}),
+    custom: Array.isArray(saved.custom) ? saved.custom.filter(r => r && r.xpath !== undefined) : [],
+    limits: saved.limits || {},
+    result: null, filter: null, tab: 'report', xpq: '/config/devices/entry/network/logical-router',
+    outName: '', outNameEdited: false, errs: []
+  };
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ model: S.model, customPorts: S.customPorts, rules: S.rules, custom: S.custom, limits: S.limits }));
+    } catch (e) { /* archiviazione del browser non disponibile: le preferenze valgono solo per questa sessione */ }
+  }
+  const model = () => E.getModel(S.model, S.customPorts);
+  const srcInv = () => (S.src && S.src.doc && S.src.info.devices[0]) ? S.src.info.devices[0].interfaces : [];
+  const hasTgt = () => !!(S.tgt && S.tgt.doc);
+  const tgtHasHA = () => hasTgt() && (S.tgt.info.devices[0].haEnabled || S.tgt.info.devices[0].haPorts.length > 0);
+  const keepHA = () => S.rules.ha && S.rules.keepHA && tgtHasHA();
+  const replacedByTarget = it => keepHA() && (it.kind === 'ha-dedicated' || it.mode === 'ha');
+  function targetHaPorts() {
+    if (!keepHA()) return new Map();
+    const m = new Map();
+    for (const [sec, port] of S.tgt.info.devices[0].haPorts) if (port !== E.MGMT) m.set(port, sec);
+    return m;
+  }
+  function suggestName() {
+    const base = S.src ? S.src.fileName.replace(/\.(xml|tgz|tar\.gz|tar|gz)$/i, '') : 'config';
+    return base + '-' + model().id.toLowerCase() + '.xml';
+  }
+
+  // ------------------------------------------------------------------ file
+  async function readConfigFile(file) {
+    const buf = await file.arrayBuffer();
+    const b = new Uint8Array(buf.slice(0, 512));
+    const isGz = b[0] === 0x1f && b[1] === 0x8b;
+    const isTar = b.length > 262 && new TextDecoder().decode(b.slice(257, 262)) === 'ustar';
+    if (isGz || isTar) {
+      const r = await E.extractRunningConfig(buf);
+      return { text: r.text, note: 'estratto ' + r.name + ' dal device state' };
+    }
+    return { text: new TextDecoder('utf-8').decode(buf) };
+  }
+  async function loadSlot(slot, file) {
+    const st = { fileName: file.name, error: null, doc: null };
+    try {
+      const r = await readConfigFile(file);
+      st.note = r.note;
+      st.doc = E.parse(r.text);
+      st.info = E.analyze(st.doc);
+      if (!st.info.ok) throw new Error(st.info.problem);
+    } catch (e) {
+      st.error = e.message || String(e);
+      st.doc = null;
+    }
+    S[slot] = st;
+    if (slot === 'src') {
+      S.map = st.doc ? E.defaultMap(srcInv(), model()) : {};
+      S.sel = null;
+      if (!S.outNameEdited) S.outName = suggestName();
+    }
+    renderSlots(); renderRules(); renderMap(); schedule(renderErrors);
+  }
+  function clearSlot(slot) {
+    S[slot] = null;
+    if (slot === 'src') { S.map = {}; S.result = null; S.sel = null; }
+    renderSlots(); renderRules(); renderMap(); schedule(renderErrors);
+  }
+
+  function renderSlots() {
+    for (const slot of ['src', 'tgt']) {
+      const box = $('#drop-' + slot);
+      const body = $('.slot-body', box);
+      const st = S[slot];
+      box.classList.toggle('is-loaded', !!(st && st.doc));
+      box.classList.toggle('is-error', !!(st && st.error));
+      $('.actions label', box).lastChild.textContent = st && st.doc ? 'Sostituisci' : 'Scegli file';
+      const actions = $('.actions', box);
+      const rm = $('.rm', actions);
+      if (st && !rm) actions.insertBefore(h('button', { type: 'button', class: 'btn quiet rm', onclick: () => clearSlot(slot) }, 'Rimuovi'), $('.or', actions));
+      else if (!st && rm) rm.remove();
+      $('.or', actions).hidden = !!(st && st.doc);
+      body.replaceChildren();
+      if (!st) continue;
+      if (st.error) {
+        body.append(h('p', { class: 'file-name' }, st.fileName), h('p', { class: 'err' }, st.error));
+        continue;
+      }
+      const d = st.info.devices[0];
+      const routing = d.are === 'yes'
+        ? 'Advanced Routing' + (d.lrs.length ? ', ' + d.lrs.length + ' logical router' : '')
+        : 'legacy' + (d.vrs.length ? ', ' + d.vrs.length + ' virtual router' : '');
+      body.append(
+        h('p', { class: 'file-name' }, st.fileName + (st.note ? ' (' + st.note + ')' : '')),
+        h('dl', { class: 'facts' },
+          h('dt', null, 'Hostname'), h('dd', null, d.hostname || 'non indicato'),
+          h('dt', null, 'PAN-OS'), h('dd', null, st.info.version || 'non indicato'),
+          h('dt', null, 'Routing'), h('dd', null, routing),
+          slot === 'src'
+            ? [h('dt', null, 'Interfacce'), h('dd', null, d.interfaces.filter(i => i.kind !== 'ha-dedicated').length + ' tra fisiche e aggregate'),
+               h('dt', null, 'Virtual system'), h('dd', null, String(d.vsys.length))]
+            : [h('dt', null, 'Management'), h('dd', null, d.mgmtIp || 'non indicato')],
+          h('dt', null, 'HA'), h('dd', null, d.haEnabled ? 'attivo, ' + d.haPorts.map(p => p[0] + ' su ' + p[1]).join(', ') : (d.haPorts.length ? 'configurato, non attivo' : 'non configurato'))
+        ),
+      );
+    }
+    $('#s1').classList.toggle('is-done', !!(S.src && S.src.doc));
+  }
+
+  // ------------------------------------------------------------------ modello e pannello
+  function renderModelSelect() {
+    const sel = $('#model');
+    sel.replaceChildren(...E.MODELS.map(m => h('option', { value: m.id }, m.id)), h('option', { value: 'custom' }, 'Personalizzato'));
+    sel.value = E.MODELS.some(m => m.id === S.model) ? S.model : 'custom';
+    if (sel.value === 'custom') S.model = 'custom';
+    $('#custom-ports-field').hidden = sel.value !== 'custom';
+    $('#custom-ports').value = S.customPorts;
+  }
+  function remapForModel() {
+    const m = model();
+    const def = E.defaultMap(srcInv(), m);
+    for (const it of srcInv()) {
+      const cur = S.map[it.key];
+      if (cur === E.DROP || it.kind === 'ae') continue;
+      if (it.kind === 'ha-dedicated' && cur === E.MGMT) continue;
+      if (cur && (m.byName.has(cur) || m.cellular.includes(cur))) continue;
+      S.map[it.key] = def[it.key];
+    }
+    if (!S.outNameEdited) S.outName = suggestName();
+  }
+
+  function portUse() {
+    const use = new Map();
+    const ports = (S.result && S.result.ports) || {};
+    for (const [name, p] of Object.entries(ports)) {
+      use.set(name, { source: p.source, ha: p.ha, mode: p.mode, ae: p.ae, units: p.units, err: !p.exists || p.collision });
+    }
+    return use;
+  }
+  function describeUse(u) {
+    if (u.ha) return 'HA (' + u.ha.join(', ') + ')';
+    let s = u.source && u.source !== '' ? 'da ' + u.source : '';
+    if (u.ae) s += (s ? ', ' : '') + 'membro di ' + u.ae;
+    else if (u.mode) s += (s ? ', ' : '') + u.mode;
+    if (u.units) s += ', ' + u.units + ' sub-interfacce';
+    return s;
+  }
+  function renderFaceplate() {
+    const m = model();
+    const fp = $('#faceplate');
+    fp.replaceChildren();
+    const mgmtHa = (S.result && S.result.mgmtHa) || [];
+    const mgmtLabel = 'Porta di management' + (mgmtHa.length ? ', usata anche da ' + mgmtHa.join(' e ') : '');
+    fp.append(h('div', { class: 'fp-brand' },
+      h('span', { class: 'fp-model' }, m.id),
+      h('span', { class: 'fp-mgmt' }, h('span', { class: 'sock-mini' + (mgmtHa.length ? ' is-ha' : ''), title: mgmtLabel, role: 'img', 'aria-label': mgmtLabel }), 'MGT')));
+    const use = portUse();
+    const selPort = S.sel ? S.map[S.sel] : null;
+    for (const g of m.groups) {
+      const grid = h('div', { class: 'fp-ports' });
+      const sfp = g.type === 'SFP' || g.type === 'SFP+';
+      for (let n = g.from; n <= g.to; n++) {
+        const name = 'ethernet1/' + n;
+        const p = m.byName.get(name);
+        const u = use.get(name);
+        const bottom = (n - g.from) % 2 === 1;
+        const cls = ['port', sfp ? 'sfp' : (bottom ? 'flip' : ''),
+          u ? (u.err ? 'is-err' : u.ha ? 'is-ha' : 'is-used') : '',
+          selPort === name ? 'is-sel' : ''].filter(Boolean).join(' ');
+        const extra = [p.poe ? 'PoE' : '', p.failOpen ? 'fail-open' : '', p.ztp ? 'ZTP' : ''].filter(Boolean).join(', ');
+        const label = name + ' (' + g.type + ' ' + speedLabel(g.speed) + (extra ? ', ' + extra : '') + '): ' + (u ? describeUse(u) : 'libera');
+        grid.append(h('button', { type: 'button', class: cls, title: label, 'aria-label': label, dataset: { port: name } },
+          h('span', { class: 'sock' }), p.poe ? h('span', { class: 'poe' }) : null,
+          h('span', { class: 'num' }, String(n)), h('span', { class: 'led' })));
+      }
+      fp.append(h('div', { class: 'fp-group' }, grid, h('span', { class: 'fp-cap' }, g.type + ' ' + speedLabel(g.speed))));
+    }
+    if (!m.groups.length) fp.append(h('span', { class: 'fp-cap' }, 'Indica le porte del modello nel campo qui sopra.'));
+    const strays = [...use.entries()].filter(([name, u]) => !m.byName.has(name) && u);
+    const st = $('#fp-strays');
+    st.hidden = !strays.length;
+    st.textContent = strays.length ? 'Porte che non esistono sul ' + m.id + ': ' + strays.map(([n, u]) => n + (u.source && u.source !== n ? ' (da ' + u.source + ')' : '')).join(', ') + '.' : '';
+  }
+
+  // ------------------------------------------------------------------ tabella porte
+  const KIND = { ethernet: 'Ethernet', ae: 'Aggregata', 'ha-dedicated': 'Porta HA dedicata', cellular: 'Cellulare' };
+  const MODE_LABEL = { layer3: 'layer 3', layer2: 'layer 2', 'virtual-wire': 'virtual wire', tap: 'tap', ha: 'HA', 'decrypt-mirror': 'decrypt mirror', 'log-card': 'log card' };
+
+  function chipsFor(it) {
+    const c = [];
+    if (it.mode === 'aggregate-group') c.push(h('span', { class: 'chip' }, 'membro di ' + it.ae));
+    else if (it.mode) c.push(h('span', { class: 'chip' }, MODE_LABEL[it.mode] || it.mode));
+    if (it.ha && it.ha.length) c.push(h('span', { class: 'chip' }, it.ha.join(', ')));
+    if (it.units.length) c.push(h('span', { class: 'chip' }, it.units.length + (it.units.length === 1 ? ' sub-interfaccia' : ' sub-interfacce')));
+    if (it.zones.length) c.push(h('span', { class: 'chip' }, (it.zones.length === 1 ? 'zona ' : 'zone ') + it.zones.join(', ')));
+    if (it.ips.length) c.push(h('span', { class: 'chip mono' }, it.ips[0] + (it.ips.length > 1 ? ' +' + (it.ips.length - 1) : '')));
+    if (it.dhcp) c.push(h('span', { class: 'chip' }, 'DHCP client'));
+    if (it.pppoe) c.push(h('span', { class: 'chip' }, 'PPPoE'));
+    if (it.members && it.members.length) c.push(h('span', { class: 'chip mono' }, it.members.join(', ')));
+    if (it.linkSpeed && it.linkSpeed !== 'auto') c.push(h('span', { class: 'chip' }, it.linkSpeed + ' Mbps'));
+    if (it.poe) c.push(h('span', { class: 'chip' }, 'PoE'));
+    if (!it.used) c.push(h('span', { class: 'chip' }, 'non usata'));
+    return h('div', { class: 'chips' }, c);
+  }
+  function holderOf(port, exceptKey) {
+    for (const it of srcInv()) {
+      if (it.key === exceptKey || replacedByTarget(it)) continue;
+      if (S.map[it.key] === port) return it.key;
+    }
+    const tha = targetHaPorts();
+    if (tha.has(port)) return 'HA ' + tha.get(port);
+    return null;
+  }
+  function portSelect(it, v, m) {
+    const sel = h('select', { 'aria-label': 'Porta per ' + it.key, dataset: { key: it.key } });
+    if (it.kind === 'ae') {
+      for (let i = 1; i <= 16; i++) sel.append(h('option', { value: 'ae' + i }, 'ae' + i));
+    } else {
+      sel.append(h('option', { value: '' }, 'scegli una porta'));
+      if (it.kind === 'ha-dedicated' && it.ha.some(s => s === 'ha1' || s === 'ha1-backup')) sel.append(h('option', { value: E.MGMT }, 'management'));
+      if (it.kind === 'cellular') for (const c of m.cellular) sel.append(h('option', { value: c }, c));
+      for (const g of m.groups) {
+        const og = h('optgroup', { label: g.type + ' ' + speedLabel(g.speed) });
+        for (let n = g.from; n <= g.to; n++) {
+          const name = 'ethernet1/' + n;
+          const holder = holderOf(name, it.key);
+          og.append(h('option', { value: name }, name + (holder ? '  (' + holder + ')' : '')));
+        }
+        sel.append(og);
+      }
+    }
+    if (it.kind !== 'ha-dedicated') sel.append(h('option', { value: E.DROP }, 'Escludi'));
+    const val = v || (it.kind === 'ae' ? it.key : '');
+    if (val && ![...sel.options].some(o => o.value === val)) sel.insertBefore(h('option', { value: val }, val + ' (non esiste)'), sel.options[it.kind === 'ae' ? 0 : 1]);
+    sel.value = val;
+    return sel;
+  }
+  function rowStatus(it, v, m) {
+    if (replacedByTarget(it)) return { cls: 'off', text: 'Sostituita' };
+    if (v === E.DROP) return { cls: 'off', text: 'Esclusa' };
+    if (it.kind === 'ha-dedicated') {
+      if (!v) return { cls: 'err', text: 'Da assegnare' };
+      if (v === E.MGMT) return { cls: 'ok', text: 'Management' };
+    }
+    const target = v || (it.kind === 'ae' ? it.key : '');
+    if (!target) return { cls: 'err', text: 'Da assegnare' };
+    const others = srcInv().filter(o => o.key !== it.key && !replacedByTarget(o) && (S.map[o.key] || (o.kind === 'ae' ? o.key : '')) === target);
+    if (others.length) return { cls: 'err', text: 'Anche ' + others.map(o => o.key).join(', ') };
+    const tha = targetHaPorts();
+    if (tha.has(target)) return { cls: 'err', text: 'Usata da ' + tha.get(target) };
+    if (it.kind === 'ae') return { cls: 'ok', text: 'OK' };
+    if (!m.byName.has(target) && !m.cellular.includes(target)) return { cls: 'err', text: 'Porta inesistente' };
+    const p = m.byName.get(target);
+    if (p && it.linkSpeed && /^\d+$/.test(it.linkSpeed) && +it.linkSpeed > p.speed) return { cls: 'warn', text: 'Velocità ' + it.linkSpeed };
+    if (p && it.poe && !p.poe && S.rules.poe) return { cls: 'warn', text: 'PoE rimosso' };
+    return { cls: 'ok', text: p ? p.type + ' ' + speedLabel(p.speed) : 'OK' };
+  }
+  function renderMap() {
+    const wrap = $('#map-wrap');
+    const inv = srcInv();
+    const m = model();
+    if (!inv.length) {
+      wrap.replaceChildren(h('p', { class: 'empty-note' }, S.src && S.src.doc ? 'La config sorgente non ha interfacce fisiche configurate.' : 'Carica la config sorgente per vedere le sue interfacce.'));
+      $('#map-summary').textContent = '';
+      $('#s2').classList.remove('is-done');
+      renderFaceplate();
+      return;
+    }
+    const tbody = h('tbody');
+    let nOk = 0, nErr = 0, nDrop = 0;
+    for (const it of inv) {
+      const v = S.map[it.key] || '';
+      const st = rowStatus(it, v, m);
+      if (st.cls === 'err') nErr++; else if (st.cls === 'off') nDrop++; else nOk++;
+      tbody.append(h('tr', { class: [S.sel === it.key ? 'is-sel' : '', it.used ? '' : 'is-unused'].join(' ').trim(), dataset: { key: it.key } },
+        h('td', null,
+          h('button', { type: 'button', class: 'if-pick if-name', 'aria-pressed': S.sel === it.key ? 'true' : 'false', title: 'Seleziona, poi clicca una porta del pannello' }, it.key),
+          h('span', { class: 'if-kind' }, KIND[it.kind] || it.kind)),
+        h('td', null, chipsFor(it)),
+        h('td', null, replacedByTarget(it) ? h('span', { class: 'small' }, 'sostituita dall\'HA del PA-500') : portSelect(it, v, m)),
+        h('td', null, h('span', { class: 'st ' + st.cls }, st.text))));
+    }
+    wrap.replaceChildren(h('table', { class: 'map' },
+      h('thead', null, h('tr', null, h('th', null, 'Interfaccia'), h('th', null, 'Configurazione'), h('th', null, 'Porta sul ' + m.id), h('th', null, 'Stato'))),
+      tbody));
+    $('#map-summary').textContent = inv.length + ' interfacce: ' + nOk + ' assegnate, ' + nDrop + ' escluse o sostituite' + (nErr ? ', ' + nErr + ' da sistemare' : '');
+    $('#s2').classList.toggle('is-done', nErr === 0);
+    renderFaceplate();
+  }
+  function assign(key, port) {
+    const it = srcInv().find(i => i.key === key);
+    if (!it || replacedByTarget(it)) return;
+    if (it.kind === 'ae') { toast('Le aggregate si assegnano dalla tabella.'); return; }
+    const prevHolder = srcInv().find(o => o.key !== key && !replacedByTarget(o) && S.map[o.key] === port);
+    const old = S.map[key];
+    S.map[key] = port;
+    if (prevHolder) {
+      S.map[prevHolder.key] = old && old !== E.DROP && old !== E.MGMT ? old : '';
+      toast(prevHolder.key + (S.map[prevHolder.key] ? ' spostata su ' + S.map[prevHolder.key] : ' ora è senza porta'));
+    }
+    S.sel = null;
+    renderMap();
+    schedule();
+  }
+
+  // ------------------------------------------------------------------ regole standard
+  const RULES = [
+    { id: 'are', title: 'Advanced Routing', desc: 'Converte i virtual router in logical router con VRF default: static route, ECMP, admin distance e next hop verso altri router. Attiva advance-routing e aggiorna l\'import delle vsys.' },
+    { id: 'dyn', parent: 'are', title: 'Converti anche BGP e OSPF', desc: 'Peer group, peer, aree, interfacce, timer e autenticazione diventano configurazione e profili ARE. Policy, route map e filtri complessi finiscono nel report, da rifare a mano.' },
+    { id: 'ifaces', title: 'Porte e interfacce', desc: 'Applica la tabella delle porte a tutta la config, sub-interfacce comprese, ed elimina le interfacce escluse con i loro riferimenti.' },
+    { id: 'ha', title: 'Alta affidabilità', desc: 'Sposta HA1 e HA2 dalle porte dedicate, che sui PA-500 non ci sono, alle porte dati scelte o alla management, impostandole in modalità HA.' },
+    { id: 'keepHA', parent: 'ha', needsTgt: true, title: 'Usa l\'HA già configurato sul PA-500', desc: 'Sostituisce la sezione HA della sorgente con quella del nuovo firewall e ne conserva le porte.' },
+    { id: 'poe', title: 'PoE', desc: 'Toglie le impostazioni PoE dalle porte che sul modello scelto non lo supportano.' },
+    { id: 'keepMgmt', needsTgt: true, title: 'Mantieni management e hostname del PA-500', desc: 'IP, maschera, gateway e hostname restano quelli del nuovo firewall, così il caricamento completo non ti chiude fuori.' },
+    { id: 'keepAdmins', needsTgt: true, title: 'Mantieni gli amministratori del PA-500', desc: 'Sostituisce utenti e password della sorgente con quelli del nuovo firewall.' }
+  ];
+  function renderRules() {
+    const ul = $('#rules');
+    ul.replaceChildren();
+    for (const r of RULES) {
+      const parentOff = r.parent && !S.rules[r.parent];
+      const noHA = r.id === 'keepHA' && hasTgt() && !tgtHasHA();
+      const disabled = (r.needsTgt && !hasTgt()) || parentOff || noHA;
+      const id = 'rule-' + r.id;
+      ul.append(h('li', { class: 'rule' + (r.parent ? ' sub' : '') + (disabled ? ' is-disabled' : '') },
+        h('input', { type: 'checkbox', id, checked: !!S.rules[r.id] && !disabled, disabled: !!disabled, dataset: { rule: r.id } }),
+        h('label', { for: id }, r.title),
+        h('p', { class: 'desc' }, r.desc + (r.needsTgt && !hasTgt() ? ' Serve la config del PA-500 al passo 1.' : noHA ? ' Il PA-500 caricato non ha HA configurato.' : ''))));
+    }
+    ul.append(h('li', { class: 'rule' },
+      h('input', { type: 'checkbox', id: 'rule-platform', checked: true, disabled: true }),
+      h('label', { for: 'rule-platform' }, 'Controlli di piattaforma'),
+      h('p', { class: 'desc' }, 'Sempre attivi: porte inesistenti sul modello, velocità non supportate, aggregate su porte diverse, multi-vsys, interfacce cellulari, residui del motore legacy e versione della sorgente.')));
+  }
+
+  // ------------------------------------------------------------------ regole personalizzate
+  const ACTIONS = [['remove', 'Rimuovi'], ['set', 'Imposta valore'], ['rename', 'Rinomina elemento'], ['replace', 'Sostituisci testo'], ['report', 'Segnala soltanto']];
+  const needsValue = a => a === 'set' || a === 'rename' || a === 'replace';
+  function hitsText(n) {
+    if (n === undefined) return { t: '', c: '' };
+    if (n < 0) return { t: 'XPath non valido', c: 'bad' };
+    if (n === 0) return { t: 'nessun nodo', c: 'zero' };
+    return { t: n + (n === 1 ? ' nodo' : ' nodi'), c: '' };
+  }
+  function renderCustom() {
+    const list = $('#custom-list');
+    list.replaceChildren();
+    if (!S.custom.length) {
+      list.append(h('p', { class: 'empty-note' }, 'Nessuna regola personalizzata. Aggiungine una oppure creala dagli errori di commit al passo 4.'));
+      return;
+    }
+    S.custom.forEach((r, i) => {
+      const hits = hitsText(S.result && S.result.ruleHits ? S.result.ruleHits[r.id] : undefined);
+      list.append(h('div', { class: 'crule' + (r.enabled === false ? ' is-off' : ''), dataset: { id: r.id } },
+        h('input', { type: 'checkbox', checked: r.enabled !== false, 'aria-label': 'Regola attiva', dataset: { f: 'enabled' } }),
+        h('input', { type: 'text', value: r.desc || '', placeholder: 'Descrizione', 'aria-label': 'Descrizione', dataset: { f: 'desc' } }),
+        h('select', { 'aria-label': 'Azione', dataset: { f: 'action' } }, ACTIONS.map(([v, t]) => h('option', { value: v, selected: r.action === v }, t))),
+        h('span', null,
+          h('span', { class: 'hits ' + hits.c, dataset: { hits: r.id } }, hits.t),
+          i > 0 ? h('button', { type: 'button', class: 'btn quiet', dataset: { act: 'up' }, title: 'Sposta prima', 'aria-label': 'Sposta prima' }, '↑') : null,
+          h('button', { type: 'button', class: 'btn quiet', dataset: { act: 'del' } }, 'Elimina')),
+        h('input', { type: 'text', class: 'mono xp', value: r.xpath || '', placeholder: '/config/devices/entry/deviceconfig/system/update-schedule', 'aria-label': 'XPath', dataset: { f: 'xpath' } }),
+        needsValue(r.action) ? h('div', { class: 'val' },
+          r.action === 'replace' ? h('input', { type: 'text', class: 'mono', value: r.pattern || '', placeholder: 'Espressione regolare', 'aria-label': 'Espressione regolare', dataset: { f: 'pattern' } }) : null,
+          h('input', { type: 'text', class: 'mono', value: r.value || '', placeholder: r.action === 'rename' ? 'Nuovo nome dell\'elemento' : r.action === 'replace' ? 'Testo sostitutivo' : 'Valore', 'aria-label': 'Valore', dataset: { f: 'value' } })) : null));
+    });
+  }
+  function renderCustomHits() {
+    for (const el of $$('[data-hits]')) {
+      const ht = hitsText(S.result && S.result.ruleHits ? S.result.ruleHits[el.dataset.hits] : undefined);
+      el.textContent = ht.t;
+      el.className = 'hits ' + ht.c;
+    }
+  }
+  function customRuleOf(el) {
+    const row = el.closest('.crule');
+    return row ? S.custom.find(r => r.id === row.dataset.id) : null;
+  }
+
+  // ------------------------------------------------------------------ errori di commit
+  function renderErrors() {
+    const list = $('#err-list');
+    list.replaceChildren();
+    if (!S.errs.length) return;
+    const doc = S.result && S.result.doc;
+    if (!doc) { list.append(h('p', { class: 'empty-note' }, 'Carica prima la config sorgente: gli errori si cercano nella config convertita.')); return; }
+    const parsed = S.errs.filter(e => e.parsed);
+    const other = S.errs.filter(e => !e.parsed);
+    if (!parsed.length) list.append(h('p', { class: 'empty-note' }, 'Nessuna riga con un percorso del tipo "vsys -> vsys1 -> ...": incolla l\'output di validate o del commit.'));
+    for (const e of parsed) {
+      const r = E.resolveError(doc, e);
+      const found = r.nodes && r.nodes.length;
+      const fixedBy = S.custom.find(c => c.fromError === e.raw && c.enabled !== false);
+      const cls = found ? 'found' : (fixedBy || r.refGone ? 'fixed' : 'miss');
+      const where = found
+        ? 'Trovato in ' + r.nodes.slice(0, 2).map(n => E.humanPath(n)).join('; ') + (r.nodes.length > 2 ? ' e altri ' + (r.nodes.length - 2) : '') + '.'
+        : fixedBy ? 'Corretto dalla regola «' + (fixedBy.desc || fixedBy.xpath) + '».'
+        : r.refGone ? 'Il valore \'' + r.ref + '\' non c\'è più nella config convertita: l\'errore è già risolto.'
+        : 'Non c\'è nella config convertita: è già corretto dalle regole, oppure riguarda un elemento che manca.';
+      list.append(h('div', { class: 'err-item ' + cls },
+        h('div', { class: 'err-raw' }, e.raw),
+        h('div', { class: 'err-where' }, where),
+        found && r.hint ? h('div', { class: 'err-hint' }, r.hint) : null,
+        found ? h('div', { class: 'err-actions' }, r.actions.map(a => h('button', { type: 'button', class: 'btn', onclick: () => addRuleFromError(e, a) }, a.label))) : null,
+        found ? h('details', { class: 'xml' }, h('summary', null, 'Mostra XML'), h('pre', { class: 'code' }, r.nodes.slice(0, 3).map(n => E.snippet(n, 3000)).join('\n\n'))) : null));
+    }
+    if (other.length) {
+      list.append(h('details', { class: 'xml' },
+        h('summary', null, other.length + (other.length === 1 ? ' riga senza percorso, non analizzata' : ' righe senza percorso, non analizzate')),
+        h('pre', { class: 'code' }, other.map(o => o.raw).join('\n'))));
+    }
+  }
+  function addRuleFromError(e, a) {
+    const generic = $('#err-generic').checked;
+    const verb = a.action === 'remove' ? 'Rimuovi' : 'Segnala';
+    S.custom.push({ id: uid(), enabled: true, desc: verb + ' per errore: ' + e.raw.slice(0, 120), xpath: generic ? a.generic : a.xpath, action: a.action, value: '', fromError: e.raw });
+    save();
+    renderCustom();
+    schedule(renderErrors);
+    toast('Regola aggiunta alle regole personalizzate');
+  }
+
+  // ------------------------------------------------------------------ esecuzione
+  let timer = null;
+  let pending = [];
+  function schedule(cb) {
+    if (cb) pending.push(cb);
+    clearTimeout(timer);
+    timer = setTimeout(runNow, 120);
+  }
+  function runNow() {
+    if (!S.src || !S.src.doc) {
+      S.result = null;
+    } else {
+      try {
+        S.result = E.run(S.src.doc, { model: S.model, customPorts: S.customPorts, map: S.map, rules: S.rules, customRules: S.custom }, hasTgt() ? S.tgt.doc : null);
+      } catch (err) {
+        S.result = { fatal: err.message || String(err) };
+        if (window.console) console.error(err);
+      }
+    }
+    renderResult();
+    renderFaceplate();
+    renderCustomHits();
+    const cbs = pending;
+    pending = [];
+    cbs.forEach(f => f());
+  }
+
+  // ------------------------------------------------------------------ risultato
+  const LEVELS = [['error', 'Errori'], ['manual', 'Da fare a mano'], ['check', 'Da verificare'], ['done', 'Applicate']];
+  const LEVEL_ORDER = { error: 0, manual: 1, check: 2, done: 3, info: 4 };
+  const LEVEL_NAME = { error: 'Errore', manual: 'Da fare a mano', check: 'Da verificare', done: 'Applicata', info: 'Nota' };
+  const TABS = [['report', 'Report'], ['load', 'Caricamento'], ['xpath', 'XPath'], ['counts', 'Conteggi']];
+
+  function renderResult() {
+    const body = $('#r-body');
+    const meta = $('#r-meta');
+    const R = S.result;
+    if (!R) {
+      meta.textContent = '';
+      body.replaceChildren(h('p', { class: 'empty' }, 'Carica la config sorgente: qui compaiono il report della conversione e il file da scaricare.'));
+      return;
+    }
+    if (R.fatal) {
+      meta.textContent = '';
+      body.replaceChildren(h('p', { class: 'verdict bad' }, 'La conversione si è interrotta: ' + R.fatal));
+      return;
+    }
+    meta.textContent = 'Config per ' + R.model.id + ', elaborata in ' + R.ms + ' ms.';
+    const st = R.stats;
+    const verdict = st.error
+      ? h('p', { class: 'verdict bad' }, st.error === 1 ? 'Un errore da correggere prima del caricamento.' : st.error + ' errori da correggere prima del caricamento.')
+      : h('p', { class: 'verdict good' }, 'Nessun errore noto: puoi caricare il file sul PA-500 e lanciare validate.');
+    const levels = h('div', { class: 'levels', role: 'group', 'aria-label': 'Filtra il report per esito' },
+      LEVELS.map(([lv, label]) => h('button', { type: 'button', class: 'lvl' + (st[lv] ? '' : ' zero'), dataset: { level: lv }, 'aria-pressed': S.filter === lv ? 'true' : 'false' },
+        h('span', null, label), h('b', null, String(st[lv])))));
+    const dl = h('div', { class: 'dl' },
+      h('div', { class: 'field' }, h('label', { for: 'out-name' }, 'Nome del file'), h('input', { type: 'text', id: 'out-name', value: S.outName, spellcheck: 'false' })),
+      h('div', { class: 'row' },
+        h('button', { type: 'button', class: 'btn primary', id: 'btn-dl-xml' }, 'Scarica config'),
+        h('button', { type: 'button', class: 'btn', id: 'btn-dl-report' }, 'Scarica report')));
+    const tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Dettagli' },
+      TABS.map(([id, label]) => h('button', { type: 'button', class: 'tab', role: 'tab', id: 'tab-' + id, tabindex: S.tab === id ? '0' : '-1', 'aria-selected': S.tab === id ? 'true' : 'false', 'aria-controls': 'r-panel', dataset: { tab: id } }, label)));
+    const panel = h('div', { class: 'panel', id: 'r-panel', role: 'tabpanel', 'aria-labelledby': 'tab-' + S.tab });
+    if (S.tab === 'report') reportPanel(panel);
+    else if (S.tab === 'load') loadPanel(panel);
+    else if (S.tab === 'xpath') xpathPanel(panel);
+    else countsPanel(panel);
+    body.replaceChildren(verdict, levels, dl, tabs, panel);
+  }
+
+  function reportPanel(panel) {
+    const items = S.result.report
+      .map((it, i) => Object.assign({ i }, it))
+      .filter(it => (S.filter ? it.level === S.filter : true))
+      .sort((a, b) => (LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]) || (a.i - b.i));
+    if (S.filter) panel.append(h('button', { type: 'button', class: 'btn quiet', onclick: () => { S.filter = null; renderResult(); } }, 'Mostra tutte le voci'));
+    if (!items.length) { panel.append(h('p', { class: 'empty' }, 'Nessuna voce in questa categoria.')); return; }
+    const ul = h('ul', { class: 'ritems' });
+    for (const it of items) {
+      ul.append(h('li', { class: 'ritem', dataset: { level: it.level } },
+        h('span', { class: 'dot', title: LEVEL_NAME[it.level] }),
+        h('div', null, h('div', { class: 'area' }, it.area + ', ' + LEVEL_NAME[it.level].toLowerCase()), h('div', { class: 'msg' }, rich(it.msg))),
+        it.xpath ? h('div', { class: 'xpath' }, it.xpath, ' ',
+          h('button', { type: 'button', class: 'btn quiet', style: 'font-family:var(--font);font-size:12.5px;padding:0 4px', onclick: () => {
+            S.custom.push({ id: uid(), enabled: true, desc: it.msg.replace(/`/g, '').slice(0, 120), xpath: it.xpath, action: 'report', value: '' });
+            save(); renderCustom(); schedule(renderErrors);
+            toast('Regola aggiunta: scegli l\'azione nelle regole personalizzate');
+          } }, 'Crea una regola')) : null,
+        it.xml ? h('details', { class: 'xml' }, h('summary', null, 'XML originale'), h('pre', { class: 'code' }, it.xml)) : null));
+    }
+    panel.append(ul);
+  }
+
+  function codeBlock(text) {
+    return h('div', { class: 'cmd' }, h('button', { type: 'button', class: 'btn', onclick: () => copy(text) }, 'Copia'), h('pre', { class: 'code' }, text));
+  }
+  async function copy(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Copiato negli appunti');
+    } catch (e) {
+      const ta = h('textarea', { style: 'position:fixed;opacity:0' }, text);
+      document.body.append(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+      ta.remove();
+      toast(ok ? 'Copiato negli appunti' : 'Copia non riuscita: seleziona il testo a mano');
+    }
+  }
+  function loadPanel(panel) {
+    const f = S.outName || 'config-pa500.xml';
+    const devName = (S.src.info.devices[0] || {}).name;
+    const cmds = E.loadCommands(f, devName);
+    const keepsMgmt = hasTgt() && S.rules.keepMgmt;
+    panel.append(h('ol', { class: 'steps-load' },
+      h('li', null,
+        h('p', null, 'Importa il file sul PA-500 da Device > Setup > Operations > Import named configuration snapshot, oppure dalla CLI:'),
+        codeBlock('scp import configuration from utente@host:/percorso/' + f)),
+      h('li', null,
+        h('p', null, keepsMgmt
+          ? 'Caricamento completo (Load named configuration snapshot o CLI). Management e hostname restano quelli del PA-500.'
+          : 'Caricamento completo (Load named configuration snapshot o CLI). Sostituisce tutta la candidate, management compreso: carica la config del PA-500 al passo 1 per conservarne l\'accesso.'),
+        codeBlock(cmds.full)),
+      h('li', null,
+        h('p', null, 'Oppure caricamento parziale: sostituisce solo oggetti condivisi, rete e vsys, e lascia intatti management, HA e amministratori del PA-500.'),
+        codeBlock(cmds.partial)),
+      h('li', null, h('p', null, 'Se validate restituisce errori, incollali al passo 4. Quando è pulito, esegui il commit.'))));
+  }
+  function xpathPanel(panel) {
+    const inp = h('input', { type: 'text', value: S.xpq, spellcheck: 'false', 'aria-label': 'XPath da cercare nella config convertita' });
+    const out = h('div');
+    const go = () => {
+      S.xpq = inp.value.trim();
+      out.replaceChildren();
+      if (!S.xpq) return;
+      let nodes;
+      try { nodes = E.evalXPath(S.result.doc, S.xpq); }
+      catch (e) { out.append(h('p', { class: 'verdict bad' }, 'XPath non valido: ' + (e.message || e))); return; }
+      out.append(h('p', { class: 'small' }, nodes.length + (nodes.length === 1 ? ' nodo trovato' : ' nodi trovati') + (nodes.length > 20 ? ', mostrati i primi 20' : '') + '.'));
+      for (const n of nodes.slice(0, 20)) out.append(h('pre', { class: 'code' }, n.nodeType === 1 ? E.snippet(n, 20000) : String(n.nodeValue != null ? n.nodeValue : n.textContent)));
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    panel.append(
+      h('p', { class: 'small' }, 'Cerca nella config convertita: serve a controllare il risultato e a scrivere le regole personalizzate.'),
+      h('div', { class: 'xp-row' }, inp, h('button', { type: 'button', class: 'btn', onclick: go }, 'Cerca')),
+      h('button', { type: 'button', class: 'btn quiet', onclick: () => {
+        S.custom.push({ id: uid(), enabled: true, desc: '', xpath: inp.value.trim(), action: 'report', value: '' });
+        save(); renderCustom(); schedule(); toast('Regola aggiunta alle regole personalizzate');
+      } }, 'Crea una regola con questo XPath'),
+      out);
+    go();
+  }
+  function countsPanel(panel) {
+    const mid = S.result.model.id;
+    const lim = S.limits[mid] || {};
+    const tb = h('tbody');
+    for (const c of S.result.counts) {
+      const l = lim[c.label];
+      const over = l && /^\d+$/.test(l) && c.value > +l;
+      tb.append(h('tr', { class: over ? 'over' : '' },
+        h('td', null, c.label),
+        h('td', { class: 'n' }, String(c.value)),
+        h('td', { class: 'lim' }, h('input', { type: 'text', inputmode: 'numeric', value: l || '', placeholder: 'limite', 'aria-label': 'Limite del ' + mid + ' per ' + c.label, dataset: { label: c.label } }))));
+    }
+    tb.addEventListener('change', e => {
+      const inp = e.target.closest('input');
+      if (!inp) return;
+      (S.limits[mid] = S.limits[mid] || {})[inp.dataset.label] = inp.value.trim();
+      save();
+      renderResult();
+    });
+    panel.append(
+      h('p', { class: 'small' }, 'Oggetti nella config convertita. Inserisci i limiti del ' + mid + ' presi dalla scheda tecnica per evidenziare quelli superati: restano salvati in questo browser.'),
+      h('table', { class: 'counts' }, tb));
+  }
+
+  // ------------------------------------------------------------------ download
+  function download(name, text, type) {
+    const url = URL.createObjectURL(new Blob([text], { type: type + ';charset=utf-8' }));
+    const a = h('a', { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+  }
+  function targetLabel(it) {
+    const v = S.map[it.key];
+    if (replacedByTarget(it)) return 'sostituita dall\'HA del PA-500';
+    if (v === E.DROP) return 'esclusa';
+    if (!v) return it.kind === 'ae' ? it.key : 'non assegnata';
+    return v;
+  }
+  function reportMarkdown() {
+    const R = S.result;
+    const L = [];
+    const d = S.src.info.devices[0];
+    L.push('# Conversione per ' + R.model.id, '');
+    L.push('- Sorgente: ' + S.src.fileName + ' (PAN-OS ' + (S.src.info.version || '?') + ', hostname ' + (d.hostname || '?') + ')');
+    if (hasTgt()) L.push('- Config del PA-500: ' + S.tgt.fileName + ' (hostname ' + (S.tgt.info.devices[0].hostname || '?') + ')');
+    L.push('- File generato: ' + (S.outName || 'config-pa500.xml'));
+    L.push('- Data: ' + new Date().toLocaleString('it-IT'), '');
+    L.push('| Errori | Da fare a mano | Da verificare | Applicate |', '|---:|---:|---:|---:|', '| ' + R.stats.error + ' | ' + R.stats.manual + ' | ' + R.stats.check + ' | ' + R.stats.done + ' |', '');
+    if (srcInv().length) {
+      L.push('## Porte', '', '| Sorgente | Tipo | ' + R.model.id + ' |', '|---|---|---|');
+      for (const it of srcInv()) L.push('| ' + it.key + ' | ' + (KIND[it.kind] || it.kind) + ' | ' + targetLabel(it) + ' |');
+      L.push('');
+    }
+    const on = RULES.filter(r => S.rules[r.id] && (!r.needsTgt || hasTgt()) && (!r.parent || S.rules[r.parent])).map(r => r.title);
+    L.push('## Regole applicate', '', ...on.map(t => '- ' + t), '- Controlli di piattaforma', '');
+    for (const [lv, title] of [['error', 'Errori'], ['manual', 'Da fare a mano'], ['check', 'Da verificare'], ['done', 'Applicate'], ['info', 'Note']]) {
+      const items = R.report.filter(i => i.level === lv);
+      if (!items.length) continue;
+      L.push('## ' + title, '');
+      for (const it of items) {
+        L.push('- **' + it.area + '**: ' + it.msg);
+        if (it.xpath) L.push('  - XPath: `' + it.xpath + '`');
+        if (it.xml) L.push('', '  ```xml', ...it.xml.split('\n').map(l => '  ' + l), '  ```', '');
+      }
+      L.push('');
+    }
+    const cr = S.custom.filter(r => r.enabled !== false && r.xpath);
+    if (cr.length) {
+      L.push('## Regole personalizzate', '');
+      for (const r of cr) L.push('- ' + (r.desc ? r.desc + ': ' : '') + '`' + r.action + '` su `' + r.xpath + '`' + (r.value ? ' (valore `' + r.value + '`)' : ''));
+      L.push('');
+    }
+    L.push('## Conteggi', '', '| Oggetto | Numero |', '|---|---:|', ...R.counts.map(c => '| ' + c.label + ' | ' + c.value + ' |'), '');
+    return L.join('\n');
+  }
+
+  // ------------------------------------------------------------------ eventi
+  function wire() {
+    for (const box of $$('.drop')) {
+      const slot = box.dataset.slot;
+      box.addEventListener('dragover', e => { e.preventDefault(); box.classList.add('is-over'); });
+      box.addEventListener('dragleave', e => { if (!box.contains(e.relatedTarget)) box.classList.remove('is-over'); });
+      box.addEventListener('drop', e => {
+        e.preventDefault();
+        box.classList.remove('is-over');
+        const f = e.dataTransfer && e.dataTransfer.files[0];
+        if (f) loadSlot(slot, f);
+      });
+    }
+    window.addEventListener('dragover', e => e.preventDefault());
+    window.addEventListener('drop', e => e.preventDefault());
+    for (const inp of $$('input[data-file]')) {
+      inp.addEventListener('change', () => {
+        const f = inp.files[0];
+        if (f) loadSlot(inp.dataset.file, f);
+        inp.value = '';
+      });
+    }
+
+    $('#model').addEventListener('change', e => {
+      S.model = e.target.value;
+      $('#custom-ports-field').hidden = S.model !== 'custom';
+      remapForModel(); save(); renderMap(); schedule();
+    });
+    $('#custom-ports').addEventListener('input', e => {
+      S.customPorts = e.target.value;
+      save(); remapForModel(); renderMap(); schedule();
+    });
+
+    $('#faceplate').addEventListener('click', e => {
+      const b = e.target.closest('.port');
+      if (!b) return;
+      const port = b.dataset.port;
+      if (S.sel) { assign(S.sel, port); return; }
+      const holder = srcInv().find(it => !replacedByTarget(it) && S.map[it.key] === port);
+      if (holder) {
+        S.sel = holder.key;
+        renderMap();
+        const row = $('tr[data-key="' + CSS.escape(holder.key) + '"]');
+        if (row) row.scrollIntoView({ block: 'nearest' });
+      } else if (srcInv().length) {
+        toast('Porta libera: seleziona prima un\'interfaccia nella tabella.');
+      }
+    });
+    $('#map-wrap').addEventListener('click', e => {
+      const b = e.target.closest('.if-pick');
+      if (!b) return;
+      const key = b.closest('tr').dataset.key;
+      S.sel = S.sel === key ? null : key;
+      renderMap();
+      if (S.sel) toast('Ora clicca una porta del pannello per ' + key);
+    });
+    $('#map-wrap').addEventListener('change', e => {
+      const sel = e.target.closest('select[data-key]');
+      if (!sel) return;
+      S.map[sel.dataset.key] = sel.value;
+      renderMap();
+      schedule();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && S.sel) { S.sel = null; renderMap(); }
+    });
+    $('#btn-drop-unused').addEventListener('click', () => {
+      let n = 0;
+      for (const it of srcInv()) {
+        if (!it.used && (it.kind === 'ethernet' || it.kind === 'ae') && S.map[it.key] !== E.DROP) { S.map[it.key] = E.DROP; n++; }
+      }
+      renderMap(); schedule();
+      toast(n ? (n === 1 ? 'Esclusa 1 interfaccia non usata' : 'Escluse ' + n + ' interfacce non usate') : 'Nessuna interfaccia inutilizzata');
+    });
+    $('#btn-reset-map').addEventListener('click', () => {
+      S.map = E.defaultMap(srcInv(), model());
+      S.sel = null;
+      renderMap(); schedule();
+    });
+
+    $('#rules').addEventListener('change', e => {
+      const cb = e.target.closest('input[data-rule]');
+      if (!cb) return;
+      S.rules[cb.dataset.rule] = cb.checked;
+      save(); renderRules(); renderMap(); schedule();
+    });
+
+    $('#btn-add-rule').addEventListener('click', () => {
+      S.custom.push({ id: uid(), enabled: true, desc: '', xpath: '', action: 'remove', value: '' });
+      save(); renderCustom();
+      const rows = $$('.crule');
+      const last = rows[rows.length - 1];
+      if (last) $('.xp', last).focus();
+    });
+    const list = $('#custom-list');
+    list.addEventListener('input', e => {
+      const f = e.target.dataset.f;
+      const r = customRuleOf(e.target);
+      if (!r || !f || e.target.type === 'checkbox' || e.target.tagName === 'SELECT') return;
+      r[f] = e.target.value;
+      save();
+      schedule(renderErrors);
+    });
+    list.addEventListener('change', e => {
+      const f = e.target.dataset.f;
+      const r = customRuleOf(e.target);
+      if (!r || !f) return;
+      if (e.target.type === 'checkbox') r.enabled = e.target.checked;
+      else if (e.target.tagName === 'SELECT') r.action = e.target.value;
+      else return;
+      save(); renderCustom(); schedule(renderErrors);
+    });
+    list.addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]');
+      if (!b) return;
+      const r = customRuleOf(b);
+      const i = S.custom.indexOf(r);
+      if (i < 0) return;
+      if (b.dataset.act === 'del') S.custom.splice(i, 1);
+      else if (b.dataset.act === 'up' && i > 0) S.custom.splice(i - 1, 0, S.custom.splice(i, 1)[0]);
+      save(); renderCustom(); schedule(renderErrors);
+    });
+    $('#btn-export-rules').addEventListener('click', () => {
+      if (!S.custom.length) { toast('Non ci sono regole personalizzate da esportare'); return; }
+      download('regole-pa500.json', JSON.stringify({ format: 'pa500-adapter-rules', version: 1, rules: S.custom.map(({ id, enabled, desc, xpath, action, value, pattern }) => ({ id, enabled, desc, xpath, action, value, pattern })) }, null, 2), 'application/json');
+    });
+    $('#file-rules').addEventListener('change', async e => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      try {
+        const data = JSON.parse(await f.text());
+        const rules = Array.isArray(data) ? data : data.rules;
+        if (!Array.isArray(rules)) throw new Error('il file non contiene un elenco di regole');
+        let n = 0;
+        for (const r of rules) {
+          if (!r || typeof r.xpath !== 'string' || !ACTIONS.some(a => a[0] === r.action)) continue;
+          if (S.custom.some(c => c.xpath === r.xpath && c.action === r.action && (c.value || '') === (r.value || ''))) continue;
+          S.custom.push({ id: uid(), enabled: r.enabled !== false, desc: String(r.desc || ''), xpath: r.xpath, action: r.action, value: String(r.value || ''), pattern: r.pattern ? String(r.pattern) : '' });
+          n++;
+        }
+        save(); renderCustom(); schedule(renderErrors);
+        toast(n ? (n === 1 ? 'Importata 1 regola' : 'Importate ' + n + ' regole') : 'Nessuna regola nuova nel file');
+      } catch (err) {
+        toast('Importazione non riuscita: ' + (err.message || err));
+      }
+    });
+
+    $('#btn-errors').addEventListener('click', () => {
+      S.errs = E.parseCommitErrors($('#errors').value);
+      if (!S.errs.length) toast('Incolla prima l\'output di validate o del commit');
+      renderErrors();
+    });
+
+    const rb = $('#r-body');
+    rb.addEventListener('click', e => {
+      const lv = e.target.closest('.lvl');
+      if (lv) {
+        S.filter = S.filter === lv.dataset.level ? null : lv.dataset.level;
+        S.tab = 'report';
+        renderResult();
+        return;
+      }
+      const tb = e.target.closest('.tab');
+      if (tb) { S.tab = tb.dataset.tab; renderResult(); $('#tab-' + S.tab).focus(); return; }
+      if (e.target.closest('#btn-dl-xml')) {
+        if (!S.result || !S.result.doc) return;
+        download(S.outName.trim() || 'config-pa500.xml', E.serialize(S.result.doc), 'application/xml');
+      }
+      if (e.target.closest('#btn-dl-report')) {
+        if (!S.result || !S.result.doc) return;
+        const base = (S.outName.trim() || 'config-pa500.xml').replace(/\.xml$/i, '');
+        download(base + '-report.md', reportMarkdown(), 'text/markdown');
+      }
+    });
+    rb.addEventListener('keydown', e => {
+      const tb = e.target.closest('.tab');
+      if (!tb || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+      const ids = TABS.map(t => t[0]);
+      const i = ids.indexOf(tb.dataset.tab);
+      S.tab = ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length];
+      renderResult();
+      $('#tab-' + S.tab).focus();
+    });
+    rb.addEventListener('input', e => {
+      if (e.target.id === 'out-name') { S.outName = e.target.value; S.outNameEdited = true; }
+    });
+  }
+
+  renderModelSelect();
+  renderSlots();
+  renderRules();
+  renderCustom();
+  renderMap();
+  renderResult();
+  wire();
+})();
+
+</script>
+</body>
+</html>

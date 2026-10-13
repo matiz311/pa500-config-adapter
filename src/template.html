@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adattatore PA-500</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='8' width='28' height='16' rx='3' fill='%23252B32'/%3E%3Crect x='6' y='12' width='6' height='6' fill='%2322C3D2'/%3E%3Crect x='14' y='12' width='6' height='6' fill='%230D1114'/%3E%3Crect x='22' y='12' width='6' height='6' fill='%230D1114'/%3E%3C/svg%3E">
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Adattatore di configurazione per PA-500</h1>
+    <p class="lede">Prende l'export XML di un firewall Palo Alto e lo prepara per i PA-500 con PAN-OS 12.1: converte il routing all'Advanced Routing, sposta le interfacce sulle porte del nuovo modello, sistema l'HA e ti dice cosa resta da fare a mano.</p>
+  </div>
+  <p class="privacy">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 7V5a4 4 0 0 1 8 0v2M3 7h10v7H3z"/></svg>
+    <span>Lavora solo in questo browser: la config non viene caricata da nessuna parte e la pagina funziona anche senza rete.</span>
+  </p>
+</header>
+
+<main class="layout">
+  <div class="steps">
+
+    <section class="step" id="s1" aria-labelledby="s1-t">
+      <div class="step-n" aria-hidden="true">1</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s1-t">Carica le configurazioni</h2>
+          <p class="sub">Esporta la config da Device &gt; Setup &gt; Operations &gt; Export named configuration snapshot, oppure usa il device state: il file viene letto qui, in locale.</p>
+        </div>
+        <div class="drops">
+          <div class="drop" id="drop-src" data-slot="src">
+            <h3>Config sorgente</h3>
+            <p class="hint">Il running-config.xml del firewall attuale o il suo device state (.tgz).</p>
+            <div class="slot-body"></div>
+            <div class="actions">
+              <label class="btn primary"><input type="file" accept=".xml,.tgz,.gz,.tar,application/xml,text/xml" class="sr-only" data-file="src">Scegli file</label>
+              <span class="or">oppure trascinalo qui</span>
+            </div>
+          </div>
+          <div class="drop" id="drop-tgt" data-slot="tgt">
+            <h3>Config del PA-500 (facoltativa)</h3>
+            <p class="hint">L'export del nuovo firewall: serve a mantenere management, HA e amministratori già configurati.</p>
+            <div class="slot-body"></div>
+            <div class="actions">
+              <label class="btn"><input type="file" accept=".xml,.tgz,.gz,.tar,application/xml,text/xml" class="sr-only" data-file="tgt">Scegli file</label>
+              <span class="or">oppure trascinalo qui</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" id="s2" aria-labelledby="s2-t">
+      <div class="step-n" aria-hidden="true">2</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s2-t">Scegli il modello e assegna le porte</h2>
+          <p class="sub">Ogni interfaccia della sorgente va su una porta del PA-500 o viene esclusa. Le sub-interfacce seguono la porta madre.</p>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="model">Modello di destinazione</label>
+            <select id="model"></select>
+          </div>
+          <div class="field" id="custom-ports-field" hidden>
+            <label for="custom-ports">Porte del modello</label>
+            <input type="text" id="custom-ports" class="mono" size="34" placeholder="1-12 rj45, 13-14 sfp, 15-16 sfp+">
+          </div>
+        </div>
+        <div>
+          <div class="faceplate-wrap"><div class="faceplate" id="faceplate" role="group" aria-label="Pannello frontale"></div></div>
+          <div class="fp-legend">
+            <span><i style="background:var(--led)"></i>assegnata</span>
+            <span><i style="background:#E0A040"></i>HA</span>
+            <span><i style="background:#F2867E"></i>da correggere</span>
+            <span><i style="background:#4A535C"></i>libera</span>
+            <span><i style="background:#E0C040;border-radius:1px;height:3px"></i>PoE</span>
+          </div>
+          <p class="fp-strays" id="fp-strays" hidden></p>
+        </div>
+        <p class="fp-note">Seleziona un'interfaccia nella tabella, poi clicca una porta del pannello per assegnarla. La numerazione ethernet1/N segue la posizione sul pannello frontale: verificala con <code>show interface all</code> sul PA-500.</p>
+        <div class="map-tools">
+          <span class="small" id="map-summary"></span>
+          <span>
+            <button type="button" class="btn" id="btn-drop-unused">Escludi le non usate</button>
+            <button type="button" class="btn quiet" id="btn-reset-map">Ripristina</button>
+          </span>
+        </div>
+        <div id="map-wrap"><p class="empty-note">Carica la config sorgente per vedere le sue interfacce.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="s3" aria-labelledby="s3-t">
+      <div class="step-n" aria-hidden="true">3</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s3-t">Scegli le regole</h2>
+          <p class="sub">Le regole standard coprono i limiti noti dei PA-500. Il risultato si aggiorna a ogni modifica.</p>
+        </div>
+        <ul class="rules" id="rules"></ul>
+        <div class="custom-head">
+          <div>
+            <h3>Regole personalizzate</h3>
+            <p class="sub">Interventi XPath applicati dopo le regole standard, nell'ordine dell'elenco. Restano salvati in questo browser; esportali per usarli su un altro PC.</p>
+          </div>
+          <span>
+            <button type="button" class="btn" id="btn-add-rule">Aggiungi regola</button>
+            <button type="button" class="btn quiet" id="btn-export-rules">Esporta</button>
+            <label class="btn quiet"><input type="file" accept=".json,application/json" class="sr-only" id="file-rules">Importa</label>
+          </span>
+        </div>
+        <div class="custom-list" id="custom-list"></div>
+      </div>
+    </section>
+
+    <section class="step" id="s4" aria-labelledby="s4-t">
+      <div class="step-n" aria-hidden="true">4</div>
+      <div class="step-body">
+        <div>
+          <h2 id="s4-t">Correggi gli errori di validate o commit</h2>
+          <p class="sub">Carica la config sul PA-500, lancia validate e incolla qui gli errori. Per ognuno trovo l'elemento nella config convertita e propongo una correzione, che diventa una regola personalizzata: così vale anche per le prossime config.</p>
+        </div>
+        <div class="field">
+          <label for="errors">Output di validate o commit</label>
+          <textarea id="errors" rows="6" placeholder="vsys -> vsys1 -> rulebase -> security -> rules -> dmz-in -> from 'old-zone' is not a valid reference"></textarea>
+        </div>
+        <div class="row">
+          <button type="button" class="btn primary" id="btn-errors">Analizza errori</button>
+          <label class="small"><input type="checkbox" id="err-generic"> Crea regole generiche, senza i nomi delle entry</label>
+        </div>
+        <div class="errs" id="err-list"></div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="result" id="result" aria-labelledby="r-t">
+    <div>
+      <h2 id="r-t">Risultato</h2>
+      <p class="meta" id="r-meta" aria-live="polite"></p>
+    </div>
+    <div id="r-body"><p class="empty">Carica la config sorgente: qui compaiono il report della conversione e il file da scaricare.</p></div>
+  </aside>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+/*UI*/
+</script>
+</body>
+</html>

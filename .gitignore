@@ -1,0 +1,14 @@
+# file generati dai test
+test/out-*.xml
+test/out-*.md
+test/*.tgz
+test/shots/
+test/big.xml
+__pycache__/
+*.pyc
+
+# config reali: non vanno mai nel repository
+*.running-config.xml
+running-config*.xml
+*device_state*.tgz
+*device-state*.tgz

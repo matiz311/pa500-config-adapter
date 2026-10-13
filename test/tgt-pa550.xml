@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<config version="12.1.0" urldb="paloaltonetworks" detail-version="12.1.4">
+  <mgt-config>
+    <users>
+      <entry name="admin"><phash>$5$newhash</phash><permissions><role-based><superuser>yes</superuser></role-based></permissions></entry>
+      <entry name="netops"><phash>$5$netops</phash><permissions><role-based><superuser>yes</superuser></role-based></permissions></entry>
+    </users>
+  </mgt-config>
+  <shared/>
+  <devices>
+    <entry name="localhost.localdomain">
+      <deviceconfig>
+        <system>
+          <hostname>pa550-a</hostname>
+          <ip-address>10.0.0.50</ip-address>
+          <netmask>255.255.255.0</netmask>
+          <default-gateway>10.0.0.254</default-gateway>
+          <type><static/></type>
+          <timezone>UTC</timezone>
+        </system>
+        <setting>
+          <advance-routing>yes</advance-routing>
+        </setting>
+        <high-availability>
+          <enabled>yes</enabled>
+          <group><group-id>20</group-id><peer-ip>10.0.0.51</peer-ip><mode><active-passive/></mode></group>
+          <interface>
+            <ha1><port>management</port></ha1>
+            <ha2><port>ethernet1/12</port></ha2>
+          </interface>
+        </high-availability>
+      </deviceconfig>
+      <network>
+        <interface>
+          <ethernet>
+            <entry name="ethernet1/12"><ha/></entry>
+          </ethernet>
+        </interface>
+        <logical-router>
+          <entry name="default"><vrf><entry name="default"/></vrf></entry>
+        </logical-router>
+      </network>
+      <vsys><entry name="vsys1"/></vsys>
+    </entry>
+  </devices>
+</config>
