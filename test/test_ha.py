@@ -22,7 +22,12 @@ JS = """
 }
 """
 
+# path monitoring HA con virtual router (legacy) e uno vuoto
+SRC_PATHMON = SRC.replace('<monitoring>', '<monitoring><path-monitoring><enabled>yes</enabled><path-group><virtual-router><entry name="default"><enabled>yes</enabled><destination-ip><entry name="gw"><enabled>yes</enabled></entry></destination-ip></entry></virtual-router></path-group></path-monitoring>', 1)
+
 CASES = [
+    ('path group HA convertito', SRC_PATHMON, None, {'ha1-a': 'management', 'ha1-b': 'ethernet1/11', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
+     lambda r: any('logical-router' in i for i in r['items']) and not any(i.startswith('error') for i in r['items'])),
     ('entrambe su management', SRC, None, {'ha1-a': 'management', 'ha1-b': 'management', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
      lambda r: any('stessa porta' in i for i in r['items']) and r['mgmtHa'] == ['ha1', 'ha1-backup']),
     ('ha1 su management, backup tolto', SRC, None, {'ha1-a': 'management', 'ha1-b': '__drop__', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},

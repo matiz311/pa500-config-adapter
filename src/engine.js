@@ -437,6 +437,16 @@
     } else {
       R.add('info', area, 'Nessun virtual router nella sorgente.');
     }
+    if (vrRoot && vrRoot.parentNode && !kids(vrRoot, 'entry').length) {
+      detach(vrRoot);
+      R.add('done', area, 'Rimosso `network/virtual-router`, vuoto: con l\'Advanced Routing non serve.');
+    }
+    haPathGroups(ctx);
+    if (!all(dev, 'network/logical-router/entry').length) {
+      const l3 = all(dev, 'network/interface/ethernet/entry').filter(e => kid(e, 'layer3')).length
+        + all(dev, 'network/interface/aggregate-ethernet/entry').filter(e => kid(e, 'layer3')).length;
+      if (l3) R.add('manual', area, 'La config non ha nessun router: ' + l3 + (l3 === 1 ? ' interfaccia layer 3 non è associata' : ' interfacce layer 3 non sono associate') + ' a un logical router e non ci sono route. Se il routing è in un\'altra config, convertila insieme a questa; altrimenti crea il logical router sul PA-500.');
+    }
 
     const setting = ensure(dev, 'deviceconfig/setting');
     const legacyFlag = kid(setting, 'advanced-routing');
@@ -457,6 +467,28 @@
       R.add('done', area, 'vsys `' + nameOf(vsys) + '`: import dei router aggiornato da `virtual-router` a `logical-router`.');
     }
     void opts;
+  }
+
+  /** Path monitoring HA: con l'Advanced Routing il path group «virtual-router» diventa «logical-router». */
+  function haPathGroups(ctx) {
+    const { dev, R } = ctx;
+    for (const pg of all(dev, 'deviceconfig/high-availability/group/monitoring/path-monitoring/path-group')) {
+      const vr = kid(pg, 'virtual-router');
+      if (!vr) continue;
+      if (!kids(vr, 'entry').length) {
+        detach(vr);
+        R.add('done', 'HA', 'Rimosso il path group HA `virtual-router` vuoto (con l\'Advanced Routing i path group usano `logical-router`).');
+        continue;
+      }
+      let lr = kid(pg, 'logical-router');
+      if (!lr) { lr = mk(dev.ownerDocument, 'logical-router'); pg.insertBefore(lr, vr); }
+      for (const e of kids(vr, 'entry')) {
+        if (ent(lr, nameOf(e))) { R.add('error', 'HA', 'Path group HA: esiste già un logical router `' + nameOf(e) + '`, quello del virtual router non è stato spostato.'); continue; }
+        lr.appendChild(e);
+      }
+      detach(vr);
+      R.add('check', 'HA', 'Path monitoring HA: i path group `virtual-router` sono diventati `logical-router` (' + kids(lr, 'entry').map(e => '`' + nameOf(e) + '`').join(', ') + '). Verifica destinazioni e IP sorgente al primo commit.', { xml: snippet(lr, 3000) });
+    }
   }
 
   function moveBfdProfiles(net, R, rp) {
@@ -1104,11 +1136,14 @@
       ensureHaInterface(ctx, p, s);
     }
     // interfacce in modalità HA non più usate
-    for (const e of all(dev, 'network/interface/ethernet/entry')) {
-      if (kid(e, 'ha') && !used.has(nameOf(e))) {
+    const idle = all(dev, 'network/interface/ethernet/entry').filter(e => kid(e, 'ha') && !used.has(nameOf(e)));
+    if (keepHA) {
+      for (const e of idle) {
         detach(e);
-        R.add('done', area, '`' + nameOf(e) + '` era in modalità HA ma non è usata dalla configurazione HA finale: rimossa.');
+        R.add('done', area, '`' + nameOf(e) + '` era in modalità HA ma non è usata dalla configurazione HA del PA-500: rimossa.');
       }
+    } else if (idle.length) {
+      R.add('info', area, 'Porte in modalità HA non usate da nessun link HA: ' + idle.map(e => '`' + nameOf(e) + '`').join(', ') + '. Restano configurate; escludile dalla tabella se non servono.');
     }
   }
 
@@ -1184,7 +1219,7 @@
         const a = links[i], b = links[j];
         if (a.port === b.port) {
           R.add('error', 'HA', '`' + a.s + '` e `' + b.s + '` usano la stessa porta `' + a.port + '`: ogni link HA, backup compresi, deve stare su una porta fisica diversa. Assegna un\'altra porta a `' + b.s + '` oppure toglilo (opzione «Nessuna» nella tabella delle porte). Al commit PAN-OS risponde «ports overlap».', { xpath: xpathOf(kid(b.sec, 'port')) });
-        } else if (a.net && b.net && sameNet(a.net, b.net)) {
+        } else if (a.net && b.net && b.s === a.s + '-backup' && sameNet(a.net, b.net)) {
           R.add('error', 'HA', 'Gli indirizzi di `' + a.s + '` (' + a.net.text + (a.port === MGMT ? ', IP di management' : '') + ') e di `' + b.s + '` (' + b.net.text + (b.port === MGMT ? ', IP di management' : '') + ') sono nella stessa subnet: i link primari e di backup devono stare su subnet diverse. Cambia l\'IP di `' + (b.port === MGMT ? a.s : b.s) + '`.', { xpath: xpathOf(b.port === MGMT ? a.ipEl || a.sec : b.ipEl || b.sec) });
         }
       }
@@ -1301,6 +1336,21 @@
       }
     }
     ctx.finalPorts = ports;
+  }
+
+  /** Valori cifrati con la master key del firewall sorgente: si decifrano solo con la stessa master key. */
+  function secretsCheck(doc, R) {
+    const tags = new Map();
+    let n = 0;
+    const els = doc.documentElement.getElementsByTagName('*');
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      if (el.firstElementChild) continue;
+      if (el.textContent.trim().startsWith('-AQ==')) { n++; tags.set(el.tagName, (tags.get(el.tagName) || 0) + 1); }
+    }
+    if (!n) return;
+    const list = [...tags.entries()].sort((a, b) => b[1] - a[1]).map(([t, c]) => '`' + t + '` ' + c).join(', ');
+    R.add('check', 'Piattaforma', 'La config contiene ' + n + ' valori cifrati con la master key del firewall sorgente (' + list + '). Se la sorgente usa una master key personalizzata, impostala uguale sul PA-500 (Device > Master Key and Diagnostics) prima del caricamento, altrimenti chiavi private, PSK e password non si decifrano e il commit fallisce.');
   }
 
   function finalScan(ctx) {
@@ -1522,6 +1572,7 @@
     if (tgtDoc && opts.rules.keepAdmins && ctxs.length) ruleKeepAdmins(ctxs[0]);
     const ruleHits = applyCustomRules(doc, opts.customRules, R);
     for (const ctx of ctxs) if (opts.rules.ha) haChecks(ctx);
+    secretsCheck(doc, R);
     if (ctxs.length) finalScan(ctxs[0]);
 
     // stato delle porte per il pannello
