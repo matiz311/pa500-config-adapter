@@ -252,6 +252,22 @@
   const DEDICATED_HA = /^(ha1-a|ha1-b|ha2-a|ha2-b|hsci|dedicated-ha1|dedicated-ha2|ha1|ha2)$/i;
   const HA_SECTIONS = ['ha1', 'ha1-backup', 'ha2', 'ha2-backup', 'ha3'];
 
+  /** [sezione, porta, implicita]: senza <port> HA1/HA2 usano la porta dedicata di default della piattaforma. */
+  function haSectionPorts(dev) {
+    const ha = at(dev, 'deviceconfig/high-availability');
+    const out = [];
+    if (!ha) return out;
+    const enabled = txt(ha, 'enabled') === 'yes';
+    for (const s of HA_SECTIONS) {
+      const sec = at(ha, 'interface/' + s);
+      if (!sec) continue;
+      const p = txt(sec, 'port');
+      if (p) out.push([s, p, false]);
+      else if ((s === 'ha1' || s === 'ha2') && (enabled || hasContent(sec))) out.push([s, 'dedicated-' + s, true]);
+    }
+    return out;
+  }
+
   function ifMode(e) {
     for (const t of MODE_TAGS) if (kid(e, t)) return t;
     return '';
@@ -275,10 +291,7 @@
       for (const vrf of all(lr, 'vrf/entry')) for (const m of members(kid(vrf, 'interface'))) push(routers, baseName(m), nameOf(lr));
     }
     const ha = new Map();
-    for (const s of HA_SECTIONS) {
-      const p = txt(dev, 'deviceconfig/high-availability/interface/' + s + '/port');
-      if (p) push(ha, p, s);
-    }
+    for (const [s, p] of haSectionPorts(dev)) push(ha, p, s);
     const inv = [];
     const aeMembers = new Map();
     for (const e of all(dev, 'network/interface/ethernet/entry')) {
@@ -343,7 +356,7 @@
         vrs: all(dev, 'network/virtual-router/entry').map(nameOf),
         lrs: all(dev, 'network/logical-router/entry').map(nameOf),
         haEnabled: txt(dev, 'deviceconfig/high-availability/enabled') === 'yes',
-        haPorts: HA_SECTIONS.map(s => [s, txt(dev, 'deviceconfig/high-availability/interface/' + s + '/port')]).filter(x => x[1]),
+        haPorts: haSectionPorts(dev).map(x => [x[0], x[1]]),
         interfaces: interfaceInventory(dev)
       });
     }
@@ -1559,6 +1572,13 @@
       const ctx = { doc, dev, R, opts, model, tdev, tdoc: tgtDoc, keepHA };
       ctxs.push(ctx);
       if (keepHA) detach(at(dev, 'deviceconfig/high-availability'));
+      else if (opts.rules.ha) {
+        for (const [sec, port, implicit] of haSectionPorts(dev)) {
+          if (!implicit) continue;
+          setText(at(dev, 'deviceconfig/high-availability/interface/' + sec), 'port', port);
+          R.add('check', 'HA', '`' + sec + '` non indica la porta: nella sorgente usava la porta HA dedicata di default, qui chiamata `' + port + '`. Scegli la porta del PA-500 nella tabella.');
+        }
+      }
       else if (opts.rules.ha && opts.rules.keepHA && tdev) R.add('info', 'HA', 'Il PA-500 caricato non ha configurazione HA: uso quella della sorgente con le porte della tabella.');
       if (opts.rules.are) ruleARE(ctx);
       if (opts.rules.ifaces) ruleInterfaces(ctx);

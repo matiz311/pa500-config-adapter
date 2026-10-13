@@ -349,7 +349,10 @@
           h('button', { type: 'button', class: 'if-pick if-name', 'aria-pressed': S.sel === it.key ? 'true' : 'false', title: 'Seleziona, poi clicca una porta del pannello' }, it.key),
           h('span', { class: 'if-kind' }, KIND[it.kind] || it.kind)),
         h('td', null, chipsFor(it)),
-        h('td', null, replacedByTarget(it) ? h('span', { class: 'small' }, 'sostituita dall\'HA del PA-500') : portSelect(it, v, m)),
+        h('td', null, replacedByTarget(it)
+          ? h('div', null, h('span', { class: 'small' }, 'Sostituita dall\'HA del PA-500. '),
+              h('button', { type: 'button', class: 'btn quiet', style: 'padding:0;font-size:13px', dataset: { act: 'source-ha' } }, 'Migra l\'HA della sorgente'))
+          : portSelect(it, v, m)),
         h('td', null, h('span', { class: 'st ' + st.cls }, st.text))));
     }
     wrap.replaceChildren(h('table', { class: 'map' },
@@ -381,7 +384,7 @@
     { id: 'dyn', parent: 'are', title: 'Converti anche BGP e OSPF', desc: 'Peer group, peer, aree, interfacce, timer e autenticazione diventano configurazione e profili ARE. Policy, route map e filtri complessi finiscono nel report, da rifare a mano.' },
     { id: 'ifaces', title: 'Porte e interfacce', desc: 'Applica la tabella delle porte a tutta la config, sub-interfacce comprese, ed elimina le interfacce escluse con i loro riferimenti.' },
     { id: 'ha', title: 'Alta affidabilità', desc: 'Sposta HA1 e HA2 dalle porte dedicate, che sui PA-500 non ci sono, alle porte dati scelte o alla management, impostandole in modalità HA.' },
-    { id: 'keepHA', parent: 'ha', needsTgt: true, title: 'Usa l\'HA già configurato sul PA-500', desc: 'Sostituisce la sezione HA della sorgente con quella del nuovo firewall e ne conserva le porte.' },
+    { id: 'keepHA', parent: 'ha', needsTgt: true, title: 'Usa l\'HA già configurato sul PA-500', desc: 'Sostituisce la sezione HA della sorgente con quella del nuovo firewall e ne conserva le porte. Disattivala per portare l\'HA della sorgente sulle porte dati che scegli nella tabella.' },
     { id: 'poe', title: 'PoE', desc: 'Toglie le impostazioni PoE dalle porte che sul modello scelto non lo supportano.' },
     { id: 'keepMgmt', needsTgt: true, title: 'Mantieni management e hostname del PA-500', desc: 'IP, maschera, gateway e hostname restano quelli del nuovo firewall, così il caricamento completo non ti chiude fuori.' },
     { id: 'keepAdmins', needsTgt: true, title: 'Mantieni gli amministratori del PA-500', desc: 'Sostituisce utenti e password della sorgente con quelli del nuovo firewall.' }
@@ -771,6 +774,12 @@
       }
     });
     $('#map-wrap').addEventListener('click', e => {
+      if (e.target.closest('[data-act="source-ha"]')) {
+        S.rules.keepHA = false;
+        save(); renderRules(); renderMap(); schedule();
+        toast('Ora scegli le porte del PA-500 per i link HA della sorgente');
+        return;
+      }
       const b = e.target.closest('.if-pick');
       if (!b) return;
       const key = b.closest('tr').dataset.key;
@@ -795,6 +804,30 @@
       }
       renderMap(); schedule();
       toast(n ? (n === 1 ? 'Esclusa 1 interfaccia non usata' : 'Escluse ' + n + ' interfacce non usate') : 'Nessuna interfaccia inutilizzata');
+    });
+    $('#btn-ha-ports').addEventListener('click', () => {
+      const m = model();
+      const taken = new Set(Object.values(S.map));
+      for (const p of targetHaPorts().keys()) taken.add(p);
+      const rank = { 'SFP+': 0, 'SFP': 1, 'mGig': 2, 'RJ-45': 3 };
+      const free = m.ports.filter(p => !taken.has(p.name));
+      let n = 0;
+      for (const it of srcInv()) {
+        if (!it.ha.length || replacedByTarget(it)) continue;
+        const v = S.map[it.key];
+        const ok = it.kind === 'ha-dedicated' ? (v === E.MGMT || v === E.DROP || m.byName.has(v)) : (v === E.DROP || m.byName.has(v || it.key));
+        if (ok) continue;
+        const ha2 = it.ha.some(sec => sec.startsWith('ha2') || sec === 'ha3');
+        // HA2 trasporta la sincronizzazione delle sessioni: meglio la porta più veloce; HA1 sta su una RJ-45
+        const pool = free.slice().sort((a, b) => ha2 ? (rank[a.type] - rank[b.type]) || (b.n - a.n) : (rank[b.type] - rank[a.type]) || (b.n - a.n));
+        const pick = pool[0];
+        if (!pick) break;
+        S.map[it.key] = pick.name;
+        free.splice(free.indexOf(pick), 1);
+        n++;
+      }
+      renderMap(); schedule();
+      toast(n ? (n === 1 ? 'Assegnata 1 porta a un link HA' : 'Assegnate ' + n + ' porte ai link HA') + ': controlla la scelta in tabella' : 'Tutti i link HA hanno già una porta valida');
     });
     $('#btn-reset-map').addEventListener('click', () => {
       S.map = E.defaultMap(srcInv(), model());

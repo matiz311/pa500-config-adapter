@@ -28,7 +28,14 @@ SRC_PATHMON = SRC.replace('<monitoring>', '<monitoring><path-monitoring><enabled
 # struttura di un PA-550 già in produzione: deve passare senza errori e senza toccare l'HA
 PA550 = (HERE / 'pa550-funzionante.xml').read_text()
 
+# HA1 e HA2 sulle porte dedicate di default: nella config manca <port>
+SRC_IMPLICIT = (SRC.replace('<ha1><port>ha1-a</port>', '<ha1>')
+                .replace('<ha1-backup><port>ha1-b</port><ip-address>10.255.254.1</ip-address><netmask>255.255.255.252</netmask></ha1-backup>', '')
+                .replace('<ha2><port>ethernet1/8</port></ha2>', '<ha2/>'))
+
 CASES = [
+    ('porte dedicate implicite', SRC_IMPLICIT, None, {'dedicated-ha1': 'ethernet1/12', 'dedicated-ha2': 'ethernet1/16', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
+     lambda r: not any(i.startswith('error') for i in r['items']) and '<port>ethernet1/12</port>' in r['xml'] and '<port>ethernet1/16</port>' in r['xml']),
     ('config di un PA-550 funzionante', PA550, None, {}, {},
      lambda r: not any(i.startswith('error') for i in r['items']) and '<port>management</port>' in r['xml'] and r['xml'].count('<ip-address>') == 2),
     ('path group HA convertito', SRC_PATHMON, None, {'ha1-a': 'management', 'ha1-b': 'ethernet1/11', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
