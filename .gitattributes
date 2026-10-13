@@ -1,0 +1,5 @@
+# La build distribuita viene confrontata byte per byte anche su Windows.
+src/* text eol=lf
+dist/*.html text eol=lf
+build.py text eol=lf
+test/*.py text eol=lf
