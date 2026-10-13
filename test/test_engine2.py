@@ -74,17 +74,58 @@ JS = """
 }
 """
 
+def check(cond, msg):
+    if not cond:
+        FAILS.append(msg)
+        print('FAIL', msg)
+
+
+FAILS = []
 with sync_playwright() as p:
     b = p.chromium.launch()
     page = b.new_page()
     page.set_content('<html><body></body></html>')
     page.add_script_tag(content=ENGINE)
     r = page.evaluate(JS, [SRC, ARE_SRC])
-    print(json.dumps(r['custom'], indent=1, ensure_ascii=False))
-    for e in r['errors']:
-        print(json.dumps(e, ensure_ascii=False))
-    print('\n'.join(r['are']))
-    print(r['areXml'])
-    print('collisione:', r['collision'])
-    print('scambio:', json.dumps(r['swap'], ensure_ascii=False))
     b.close()
+
+# 1. regole personalizzate
+c = r['custom']
+check(c['hits'] == {'a': 1, 'b': 1, 'c': 1, 'd': 1, 'e': -1, 'f': 1, 'g': 0}, 'conteggio nodi delle regole: %s' % c['hits'])
+check(c['tz'] == 'UTC', 'set: timezone = %r' % c['tz'])
+check(c['ip'] == '172.16.10.10/32', 'replace: ip-netmask = %r' % c['ip'])
+check(c['renamed'] == 1, 'rename: dns-setting-x non trovato')
+check(c['nat'] == 0, 'remove: rulebase/nat ancora presente')
+check(c['hostname'] == 1, 'la regola disattivata ha rimosso l\'hostname')
+check(any(m.startswith('error') and 'XPath non valido' in m for m in c['msgs']), 'XPath non valido non segnalato')
+check(any(m.startswith('check') and 'lan-out' in m for m in c['msgs']), 'regola report senza segnalazione')
+
+# 2. errori di commit
+e = r['errors']
+check([x['parsed'] for x in e] == [False, True, True, True, True, True, False], 'righe riconosciute: %s' % [x['parsed'] for x in e])
+check([x['n'] for x in e] == [0, 1, 1, 1, 1, 0, 0], 'nodi trovati per riga: %s' % [x['n'] for x in e])
+ref = e[1]['actions']
+check(ref and ref[0][0] == "Rimuovi il riferimento 'old-zone'" and ref[0][1].endswith("/from/member[.='old-zone']"), 'azione sul riferimento: %s' % ref[:1])
+check(ref and ref[0][2] == "/config/devices/entry/vsys/entry/rulebase/security/rules/entry/from/member[.='old-zone']", 'XPath generico: %s' % ref[:1])
+check([a[0] for a in e[3]['actions']] == ['Segnala soltanto'], 'constraints failed deve proporre solo la segnalazione: %s' % e[3]['actions'])
+check('advance-routing' in (e[3]['hint'] or ''), 'manca il suggerimento su advance-routing')
+check([a[0] for a in e[4]['actions']] == ['Segnala soltanto'], 'is missing deve proporre solo la segnalazione')
+check(e[5]['actions'] == [], 'percorso inesistente con azioni proposte')
+
+# 3. sorgente già con Advanced Routing, multi-vsys, Panorama
+are = '\n'.join(r['are'])
+check('virtual router residui' in are, 'virtual router residui non rimossi')
+check('2 virtual system' in are, 'multi-vsys non segnalato')
+check('Panorama' in are, 'gestione da Panorama non segnalata')
+check('<virtual-router' not in r['areXml'] and 'ethernet1/3' in r['areXml'], 'XML convertito inatteso')
+
+# 4. collisione e scambio di porte
+check(any('Più interfacce finiscono su `ethernet1/1`' in m for m in r['collision']), 'collisione non segnalata: %s' % r['collision'])
+sw = r['swap']
+check(sw['errors'] == [], 'scambio di porte con errori: %s' % sw['errors'])
+check(sw['zoneUntrust'] == 'ethernet1/2', 'zona untrust: %r' % sw['zoneUntrust'])
+check(sw['unit'] == ['ethernet1/1.10', 'ethernet1/1.20'], 'sub-interfacce dopo lo scambio: %s' % sw['unit'])
+check(sw['dhcp'] == ['ethernet1/1.10', 'ethernet1/9'], 'DHCP dopo lo scambio: %s' % sw['dhcp'])
+
+print('test_engine2: %d verifiche fallite' % len(FAILS) if FAILS else 'test_engine2: tutte le verifiche passate')
+sys.exit(1 if FAILS else 0)
