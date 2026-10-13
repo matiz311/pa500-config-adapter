@@ -1,0 +1,60 @@
+name: Attribuzione e test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  attribuzione:
+    name: Ogni commit dichiara chi l'ha fatto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Controlla il trailer Agente
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then range="$PR_BASE..$PR_HEAD";
+          elif [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then range="$AFTER~1..$AFTER";
+          else range="$BEFORE..$AFTER"; fi
+          missing=0
+          for c in $(git rev-list --no-merges "$range"); do
+            agent=$(git log -1 --format='%(trailers:key=Agente,valueonly)' "$c" | head -1 | tr -d '[:space:]')
+            if [ -z "$agent" ]; then
+              echo "::error::Il commit $(git log -1 --format='%h %s' "$c") non ha il trailer 'Agente:' (vedi AGENTS.md)"
+              missing=1
+            else
+              echo "$(git log -1 --format='%h' "$c") Agente: $agent"
+            fi
+          done
+          exit $missing
+
+  test:
+    name: Build e test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dipendenze
+        run: |
+          pip install playwright pyyaml
+          python -m playwright install --with-deps chromium
+      - name: dist/ allineato a src/
+        run: |
+          python3 build.py
+          git diff --exit-code -- dist/ || (echo "::error::dist/pa500-adattatore.html non è aggiornato: esegui python3 build.py" && exit 1)
+      - name: Test
+        run: |
+          python3 test/test_engine.py
+          python3 test/test_engine2.py
+          python3 test/test_ha.py
+          python3 test/test_ui.py

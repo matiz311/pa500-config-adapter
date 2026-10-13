@@ -41,6 +41,10 @@ Policy BGP, route map e filtri complessi, OSPFv3, RIP e multicast non vengono co
 - L'admin distance OSPF interna viene impostata a 30 come nel motore legacy (il default ARE è 110). Il report lo segnala.
 - I limiti di capacità dei modelli (zone, regole, tunnel) non sono pubblicati in forma verificabile: la scheda «Conteggi» li fa inserire a mano.
 
+## Chi ci lavora
+
+Sul progetto lavorano il proprietario, Claude e ChatGPT. Le regole per rendere ogni commit, issue e pull request riconducibile a chi l'ha fatta sono in [AGENTS.md](AGENTS.md); la GitHub Action `Attribuzione e test` controlla il trailer `Agente:` di ogni commit e fa girare i test.
+
 ## Struttura
 
 ```
