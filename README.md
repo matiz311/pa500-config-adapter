@@ -26,7 +26,7 @@ Le regole personalizzate restano salvate nel browser e si possono esportare e im
 `.github/workflows/pages.yml` pubblica `dist/pa500-adattatore.html` come `index.html` ogni volta che i test passano su `main`; si può lanciare anche a mano (Actions > Pubblicazione su GitHub Pages > Run workflow). Richiede Settings > Pages > Source «GitHub Actions», già attivo.
 
 - Il sito è pubblico anche se il repository è privato (Pages privato solo con GitHub Enterprise Cloud), e da un repository privato Pages richiede GitHub Pro. Nella pagina non ci sono dati reali: solo il codice dello strumento.
-- La config non lascia mai il browser: la pagina dichiara una Content-Security-Policy con `connect-src 'none'`, quindi il browser blocca qualunque richiesta in uscita. `test/test_ui.py` lo verifica.
+- La config non lascia mai il browser: la pagina dichiara una Content-Security-Policy con `connect-src 'none'`, quindi il browser blocca qualunque richiesta in uscita. `test/test_ui.py` lo verifica. Anche il font dei titoli è incorporato nella pagina, per cui non serve nessuna risorsa esterna.
 
 ## Cosa converte
 
@@ -60,6 +60,7 @@ Sul progetto lavorano il proprietario, Claude e ChatGPT. Le regole per rendere o
 src/engine.js      motore di conversione, senza interfaccia
 src/ui.js          interfaccia della pagina
 src/style.css      stili
+src/fonts/         Barlow Semi Condensed per i titoli (SIL OFL 1.1), incorporato nella pagina da build.py
 src/template.html  scheletro della pagina
 build.py           assembla dist/pa500-adattatore.html
 tools/anonimizza.py  rende anonime config reali da usare come schema di migrazione
