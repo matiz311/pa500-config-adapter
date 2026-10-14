@@ -1127,13 +1127,13 @@ pre.code {
     const idle = [];
     if (adSet['ospf-intra'] === '30') {
       delete adSet['ospf-intra']; delete adSet['ospf-inter'];
-      if (ospfOn) R.add('check', 'OSPF', '`' + name + '`: admin distance OSPF interna 30 del motore legacy non portata; nell\\'ARE/PAN-OS 12.x resta il default 110. Verifica la preferenza delle route dopo la migrazione.');
+      if (ospfOn) R.add('check', 'OSPF', '`' + name + '`: admin distance OSPF interna 30 del motore legacy non portata; nell\'ARE/PAN-OS 12.x resta il default 110. Verifica la preferenza delle route dopo la migrazione.');
       else idle.push('OSPF');
     }
     if (!ospf3On && adSet['ospfv3-intra'] === '30') { delete adSet['ospfv3-intra']; delete adSet['ospfv3-inter']; idle.push('OSPFv3'); }
     if (idle.length) R.add('info', area, '`' + name + '`: ' + idle.join(' e ') + ' disattivato: la distanza interna resta al default ARE (110) invece del 30 legacy, come nei logical router creati da PAN-OS.');
     if (ospfOn && !(ad && kid(ad, 'ospf-int'))) {
-      R.add('check', 'OSPF', '`' + name + '`: OSPF attivo senza admin distance interna esplicita: nell\\'ARE/PAN-OS 12.x vale il default 110 (nel legacy era 30). Verifica la preferenza delle route dopo la migrazione.');
+      R.add('check', 'OSPF', '`' + name + '`: OSPF attivo senza admin distance interna esplicita: nell\'ARE/PAN-OS 12.x vale il default 110 (nel legacy era 30). Verifica la preferenza delle route dopo la migrazione.');
     }
     if (ospf3On && !(ad && kid(ad, 'ospfv3-int'))) {
       adSet['ospfv3-intra'] = '30'; adSet['ospfv3-inter'] = '30';
