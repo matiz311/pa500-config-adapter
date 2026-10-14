@@ -23,7 +23,7 @@ Le regole personalizzate restano salvate nel browser e si possono esportare e im
 
 ### Pubblicazione su GitHub Pages
 
-`.github/workflows/pages.yml` pubblica `dist/pa500-adattatore.html` come `index.html` ogni volta che i test passano su `main`; si può lanciare anche a mano (Actions > Pubblicazione su GitHub Pages > Run workflow). Per attivarla: Settings > Pages > Source «GitHub Actions». Finché Pages non è attivo il workflow si ferma con un avviso.
+`.github/workflows/pages.yml` pubblica `dist/pa500-adattatore.html` come `index.html` ogni volta che i test passano su `main`; si può lanciare anche a mano (Actions > Pubblicazione su GitHub Pages > Run workflow). Richiede Settings > Pages > Source «GitHub Actions», già attivo.
 
 - Il sito è pubblico anche se il repository è privato (Pages privato solo con GitHub Enterprise Cloud), e da un repository privato Pages richiede GitHub Pro. Nella pagina non ci sono dati reali: solo il codice dello strumento.
 - La config non lascia mai il browser: la pagina dichiara una Content-Security-Policy con `connect-src 'none'`, quindi il browser blocca qualunque richiesta in uscita. `test/test_ui.py` lo verifica.
