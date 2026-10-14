@@ -1116,29 +1116,45 @@
     if (keys.length) {
       const re = nameRegex(keys);
       let count = 0;
-      const odd = [];
-      const els = doc.documentElement.getElementsByTagName('*');
-      for (let i = 0; i < els.length; i++) {
-        const el = els[i];
+      const unknown = [];
+      const els = Array.from(doc.documentElement.getElementsByTagName('*'));
+      for (const el of els) {
         const nm = el.getAttribute('name');
         if (nm != null) {
           const m = re.exec(nm);
           if (m) {
-            el.setAttribute('name', rename[m[1]] + m[2]);
-            count++;
-            if (!underInterfaceTree(el) && !underNetwork(el)) odd.push(el);
+            if (isInterfaceNameRef(el)) {
+              el.setAttribute('name', rename[m[1]] + m[2]);
+              count++;
+            } else {
+              unknown.push({ el, value: nm, kind: 'nome' });
+            }
           }
         }
         if (!el.firstElementChild) {
           const t = el.textContent.trim();
           if (t) {
             const m = re.exec(t);
-            if (m) { el.textContent = rename[m[1]] + m[2]; count++; }
+            if (m) {
+              if (isInterfaceTextRef(el)) {
+                el.textContent = rename[m[1]] + m[2];
+                count++;
+              } else {
+                unknown.push({ el, value: t, kind: 'valore' });
+              }
+            }
           }
         }
       }
-      R.add('done', area, 'Rinominate le interfacce (' + keys.map(k => '`' + k + '` → `' + rename[k] + '`').join(', ') + '): ' + count + ' riferimenti aggiornati, sub-interfacce comprese.');
-      for (const el of odd) R.add('check', area, 'Rinominato anche un oggetto che ha il nome di un\'interfaccia: ' + humanPath(el) + '.');
+      R.add('done', area, 'Rinominate le interfacce (' + keys.map(k => '`' + k + '` → `' + rename[k] + '`').join(', ') + '): ' + count + ' riferimenti tipizzati aggiornati, sub-interfacce comprese.');
+      const seen = new Set();
+      for (const it of unknown) {
+        const p = humanPath(it.el);
+        const sig = it.kind + '|' + p + '|' + it.value;
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        R.add('check', area, 'Preservato ' + it.kind + ' omonimo a un\'interfaccia in ' + p + ' (`' + it.value + '`): il percorso non è riconosciuto come riferimento di interfaccia; verifica solo se quel valore deve seguire la rinomina.');
+      }
     }
     ctx.rename = rename;
     ctx.drop = drop;
