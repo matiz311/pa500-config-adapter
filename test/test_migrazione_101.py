@@ -5,6 +5,12 @@ Dal confronto tra l'uscita dello strumento e la config estratta dal PA-540 dopo 
   10.2 non esiste: PAN-OS lo sostituisce con `local-inline-cat`/`cloud-inline-cat`;
 - due regole deny usavano le EDL predefinite `panw-*`, che su un PA-500 appena inizializzato non
   esistono finché non si installano i contenuti: il commit fallisce e le regole erano state tolte.
+
+Dal confronto tra la config del secondo nodo HA preparata a mano e quella generata dallo strumento:
+- la config generata, caricata e salvata come candidate, porta i marcatori delle modifiche non
+  committate (`admin`, `dirtyId`, `time`, nodi `deleted`);
+- il caricamento completo sostituisce `mgt-config` e toglie l'account di sistema `__telemetryuser`
+  e la complessità minima delle password che il PA-540 aveva.
 """
 import pathlib
 import sys
@@ -16,8 +22,11 @@ HERE = pathlib.Path(__file__).parent
 ENGINE = (HERE.parent / 'src' / 'engine.js').read_text()
 
 SRC = """<config version="10.1.0" urldb="paloaltonetworks" detail-version="10.1.14">
+  <mgt-config><users><entry name="admin"><phash>$5$sintetico$hash</phash><permissions><role-based><superuser>yes</superuser></role-based></permissions></entry></users></mgt-config>
   <devices><entry name="localhost.localdomain">
-    <deviceconfig><system><hostname>fw-101</hostname></system></deviceconfig>
+    <deviceconfig><system><hostname>fw-101</hostname>
+      <dns-setting><dns-proxy-object admin="admin" dirtyId="7" time="2026/01/01 10:00:00">mgmt</dns-proxy-object><deleted admin="admin" dirtyId="7" time="2026/01/01 10:00:00"/><deleted admin="admin" dirtyId="7" time="2026/01/01 10:00:00"/></dns-setting>
+    </system></deviceconfig>
     <network>
       <interface><ethernet>
         <entry name="ethernet1/1"><layer3><ip><entry name="203.0.113.2/29"/></ip></layer3></entry>
@@ -74,11 +83,23 @@ SRC = """<config version="10.1.0" urldb="paloaltonetworks" detail-version="10.1.
   </entry></devices>
 </config>"""
 
+# config del PA-540 appena inizializzato: account di sistema e complessità delle password
+TARGET = """<config version="12.1.0" detail-version="12.1.5">
+  <mgt-config>
+    <users>
+      <entry name="admin"><phash>$5$sintetico$pa540</phash><permissions><role-based><superuser>yes</superuser></role-based></permissions></entry>
+      <entry name="__telemetryuser"><phash>$5$sintetico$tel</phash><permissions><role-based><deviceadmin><member>localhost.localdomain</member></deviceadmin></role-based></permissions></entry>
+    </users>
+    <password-complexity><enabled>yes</enabled><minimum-length>8</minimum-length></password-complexity>
+  </mgt-config>
+  <devices><entry name="localhost.localdomain"><deviceconfig><system><hostname>pa540</hostname><ip-address>10.0.254.10</ip-address></system></deviceconfig></entry></devices>
+</config>"""
+
 COMMIT_ERROR = 'vsys -> vsys1 -> rulebase -> security -> rules -> deny-in -> source \'panw-highrisk-ip-list\' is not a valid reference'
 
-JS = """([src, err]) => {
+JS = """([src, err, tgt, admins]) => {
   const r = PA500.run(PA500.parse(src), { model: 'PA-540', map: {}, customRules: [],
-    rules: { are: true, dyn: true, ifaces: true, ha: true, poe: true } }, null);
+    rules: { are: true, dyn: true, ifaces: true, ha: true, poe: true, keepAdmins: !!admins } }, tgt ? PA500.parse(tgt) : null);
   const res = PA500.resolveError(PA500.parse(src), PA500.parseCommitErrors(err)[0]);
   return { xml: PA500.serialize(r.doc), stats: r.stats, hint: res.hint || '', actions: res.actions.map(a => a.label),
     report: r.report.map(i => i.level + ' [' + i.area + '] ' + i.msg), xpaths: r.report.filter(i => i.msg.includes('EDL predefinite')).map(i => i.xpath || '') };
@@ -98,7 +119,9 @@ with sync_playwright() as p:
     page = b.new_page()
     page.set_content('<html></html>')
     page.add_script_tag(content=ENGINE)
-    r = page.evaluate(JS, [SRC, COMMIT_ERROR])
+    r = page.evaluate(JS, [SRC, COMMIT_ERROR, None, False])
+    rt = page.evaluate(JS, [SRC, COMMIT_ERROR, TARGET, False])
+    ra = page.evaluate(JS, [SRC, COMMIT_ERROR, TARGET, True])
     b.close()
 
 d = ET.fromstring(r['xml'].encode())
@@ -131,6 +154,27 @@ if edl:
 # errore di commit su una EDL predefinita: suggerimento sui contenuti
 check('Threat Prevention' in r['hint'] and 'Antivirus' in r['hint'], 'suggerimento per l\'errore di commit mancante: %r' % r['hint'])
 check(any('panw-highrisk-ip-list' in a for a in r['actions']), 'azione di rimozione del solo riferimento mancante: %s' % r['actions'])
+
+# candidate con modifiche non committate: marcatori tolti, contenuto invariato
+check('dirtyId' not in r['xml'] and '<deleted' not in r['xml'], 'marcatori della candidate rimasti')
+check(d.findtext('devices/entry/deviceconfig/system/dns-setting/dns-proxy-object') == 'mgmt', 'contenuto della candidate modificato')
+mk = [i for i in r['report'] if 'candidate con modifiche' in i]
+check(len(mk) == 1 and '3 nodi marcati' in mk[0] and '2 nodi `deleted`' in mk[0] and '`admin`' in mk[0], 'avviso sui marcatori della candidate sbagliato: %s' % mk)
+
+
+# account di sistema e complessità delle password
+def users(res):
+    return [e.get('name') for e in ET.fromstring(res['xml'].encode()).findall('mgt-config/users/entry')]
+
+
+check(users(r) == ['admin'] and any(i.startswith('check [Management]') and '__telemetryuser' in i for i in r['report']), 'senza config del PA-500: avviso su __telemetryuser mancante')
+t = ET.fromstring(rt['xml'].encode())
+check(users(rt) == ['admin', '__telemetryuser'], 'account di sistema non mantenuto: %s' % users(rt))
+check(t.findtext("mgt-config/users/entry[@name='admin']/phash") == '$5$sintetico$hash', 'amministratori della sorgente sostituiti')
+check(t.findtext('mgt-config/password-complexity/minimum-length') == '8', 'complessità delle password del PA-540 persa')
+check(not any('__telemetryuser' in i and i.startswith('check') for i in rt['report']), 'avviso su __telemetryuser con la config del PA-500 caricata')
+ta = ET.fromstring(ra['xml'].encode())
+check(users(ra) == ['admin', '__telemetryuser'] and ta.findtext("mgt-config/users/entry[@name='admin']/phash") == '$5$sintetico$pa540', 'con «Mantieni gli amministratori» mgt-config non è quello del PA-540: %s' % users(ra))
 
 print('test_migrazione_101: %d verifiche fallite' % len(FAILS) if FAILS else 'test_migrazione_101: tutte le verifiche passate')
 sys.exit(1 if FAILS else 0)

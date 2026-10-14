@@ -98,6 +98,16 @@ L'ECMP del logical router è scritto con i default espliciti (`enable` `no`, `ma
 
 **Residuo dei caricamenti parziali:** nella config finale c'è anche il virtual router legacy della sorgente, con le stesse route e interfacce del logical router e le admin distance legacy. Non viene dallo strumento, ma da caricamenti parziali fatti dalla config originale. Con l'Advanced Routing viene ignorato ma resta nella config. La scheda «Caricamento» ora spiega di caricare solo dal file convertito e dà i comandi per cancellarlo (`delete network virtual-router`).
 
+### Secondo nodo HA: preparato a mano o con lo strumento
+
+Per il secondo PA-540 della coppia ci sono due config. La prima è preparata a mano: solo management e HA, il resto arriva dalla sincronizzazione HA. La seconda è generata dallo strumento, caricata e salvata come candidate.
+
+- **Parti che la sincronizzazione HA porta comunque** (rete, zone, regole, oggetti, profili): la config dello strumento coincide con quella del primo nodo. Le uniche differenze sono la porta tap e il virtual router residuo, che il primo nodo ha ancora.
+- **Parti che la sincronizzazione HA non porta:** la config dello strumento le ha già, quella preparata a mano no. Per esempio il profilo SSL/TLS della management, che secondo [Reference: HA Synchronization][hasync] va configurato su ciascun nodo.
+- **Solo nella config preparata a mano:** l'account di sistema `__telemetryuser` e la complessità minima delle password, che il PA-540 ha dall'inizializzazione. Il caricamento completo li toglie, perché `mgt-config` arriva dalla sorgente, e PAN-OS ricrea l'account solo al riavvio ([__telemetryuser System Account][telemetry]). Ora lo strumento li mantiene se carichi anche la config del PA-500; altrimenti segnala di riavviare dopo il commit.
+- **Impostazioni locali diverse tra i due nodi:** la verifica dell'identità del server degli aggiornamenti (`server-verification`), il `sync-to-peer` della pianificazione degli aggiornamenti e lo User-ID Syslog Listener UDP e SSL della management. Vengono dalla sorgente di ciascun nodo, e nella coppia reale erano già diverse prima della migrazione. Non si sincronizzano, quindi vanno allineate a mano.
+- **Marcatori della candidate:** la config salvata con modifiche non committate porta `admin`, `dirtyId` e `time` sui nodi modificati e nodi `deleted` al posto di quelli cancellati. Se si usa un file così come sorgente, lo strumento toglie i marcatori e lo segnala.
+
 `test/test_migrazione_101.py` riproduce questi casi con dati sintetici.
 
 ## Novità che una config vecchia non ha
@@ -118,5 +128,7 @@ Il confronto con gli schemi trova gli elementi **aggiunti** dopo la 11.0, non qu
 [inlinecat]: https://docs.paloaltonetworks.com/pan-os/10-2/pan-os-admin/url-filtering/configure-url-filtering-inline-ml
 [edl]: https://docs.paloaltonetworks.com/network-security/security-policy/objects/external-dynamic-lists
 [edl-live]: https://live.paloaltonetworks.com/t5/general-topics/paloalto-predefined-ip-lists-not-appearing/td-p/579833
+[hasync]: https://docs.paloaltonetworks.com/pan-os/10-1/pan-os-admin/high-availability/reference-ha-synchronization/what-settings-dont-sync-in-activepassive-ha
+[telemetry]: https://docs.paloaltonetworks.com/ngfw/administration/device-telemetry/telemetryuser-system-account
 [sr-are]: https://docs.paloaltonetworks.com/pan-os/10-2/pan-os-networking-admin/advanced-routing/create-a-static-route
 [sr-vr]: https://docs.paloaltonetworks.com/pan-os/11-0/pan-os-web-interface-help/network/network-virtual-routers/static-routes

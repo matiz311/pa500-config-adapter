@@ -1995,6 +1995,32 @@ pre.code {
     }
     R.add('done', 'Management', 'Hostname e IP di management presi dal PA-500: `' + (txt(tsys, 'hostname') || '?') + '`, `' + (txt(tsys, 'ip-address') || (kid(at(tsys, 'type'), 'dhcp-client') ? 'DHCP' : '?')) + '`.');
   }
+  /**
+   * Account e impostazioni del PA-500 che un caricamento completo cancella, perché `mgt-config`
+   * arriva dalla sorgente: l'account di sistema `__telemetryuser` (PAN-OS lo ricrea solo al
+   * riavvio) e la complessità minima delle password.
+   */
+  const TELEMETRY_USER = '__telemetryuser';
+  function ruleSystemAccounts(ctx) {
+    const { doc, R } = ctx;
+    const root = doc.documentElement;
+    const tm = ctx.tdoc ? at(ctx.tdoc.documentElement, 'mgt-config') : null;
+    if (!ent(at(root, 'mgt-config/users'), TELEMETRY_USER)) {
+      const tu = ent(at(tm, 'users'), TELEMETRY_USER);
+      if (tu) {
+        cloneTo(ensure(root, 'mgt-config/users'), tu);
+        R.add('done', 'Management', 'Mantenuto l\'account di sistema `' + TELEMETRY_USER + '` del PA-500. La sorgente non lo ha: senza, con la Device Telemetry attiva PAN-OS invia bundle vuoti finché non lo ricrea al riavvio.');
+      } else if (!tm) {
+        // con la config del PA-500 caricata e senza l'account, la release del PA-500 non lo prevede
+        R.add('check', 'Management', 'Dalla 12.1.4-h3 e dalla 12.1.5 PAN-OS ha l\'account di sistema `' + TELEMETRY_USER + '`, che la sorgente non ha. Il caricamento completo lo toglie e PAN-OS lo ricrea solo al riavvio successivo: riavvia il PA-500 dopo il commit, oppure carica qui anche la sua config per conservarlo. Il caricamento parziale non tocca gli amministratori.');
+      }
+    }
+    const pc = kid(tm, 'password-complexity');
+    if (pc && !at(root, 'mgt-config/password-complexity')) {
+      cloneTo(ensure(root, 'mgt-config'), pc);
+      R.add('done', 'Management', 'La sorgente non imposta la complessità minima delle password: mantenuta quella del PA-500 (' + (txt(pc, 'enabled') === 'yes' ? 'attiva' : 'disattivata') + (txt(pc, 'minimum-length') ? ', lunghezza minima ' + txt(pc, 'minimum-length') : '') + '). Vale per le password impostate da ora in poi.');
+    }
+  }
   function ruleKeepAdmins(ctx) {
     const { doc, R } = ctx;
     const tm = at(ctx.tdoc.documentElement, 'mgt-config');
@@ -2081,6 +2107,24 @@ pre.code {
     if (!n) return;
     const list = [...tags.entries()].sort((a, b) => b[1] - a[1]).map(([t, c]) => '`' + t + '` ' + c).join(', ');
     R.add('check', 'Piattaforma', 'La config contiene ' + n + ' valori cifrati con la master key del firewall sorgente (' + list + '). Se la sorgente usa una master key personalizzata, impostala uguale sul PA-500 (Device > Master Key and Diagnostics) prima del caricamento, altrimenti chiavi private, PSK e password non si decifrano e il commit fallisce.');
+  }
+
+  /**
+   * Una candidate salvata con modifiche non committate porta i marcatori di PAN-OS: attributi
+   * `admin`, `dirtyId` e `time` sui nodi modificati e nodi `<deleted>` al posto di quelli cancellati.
+   * Il contenuto è già quello della candidate: i marcatori sono solo metadati delle modifiche.
+   */
+  function candidateMarkers(doc, R) {
+    const who = new Set();
+    let n = 0, del = 0;
+    for (const el of Array.from(doc.documentElement.getElementsByTagName('*'))) {
+      if (!el.hasAttribute('dirtyId')) continue;
+      n++;
+      if (el.getAttribute('admin')) who.add(el.getAttribute('admin'));
+      if (el.tagName === 'deleted' && !el.firstElementChild) { detach(el); del++; continue; }
+      for (const a of ['admin', 'dirtyId', 'time']) el.removeAttribute(a);
+    }
+    if (n && R) R.add('check', 'Piattaforma', 'La config è una candidate con modifiche non ancora committate (' + n + (n === 1 ? ' nodo marcato' : ' nodi marcati') + (who.size ? ', amministratore ' + [...who].map(w => '`' + w + '`').join(', ') : '') + '). Tolti i marcatori di PAN-OS: attributi `admin`, `dirtyId` e `time`' + (del ? ' e ' + del + (del === 1 ? ' nodo' : ' nodi') + ' `deleted`' : '') + '. Il contenuto resta quello della candidate: se quelle modifiche non vanno tenute, esporta la running config.');
   }
 
   /**
@@ -2404,6 +2448,7 @@ pre.code {
     const t0 = Date.now();
     const R = new Report();
     const doc = srcDoc.cloneNode(true);
+    candidateMarkers(doc, R);
     const model = getModel(opts.model, opts.customPorts);
     const devs = all(doc.documentElement, 'devices/entry');
     const tdevs = tgtDoc ? all(tgtDoc.documentElement, 'devices/entry') : [];
@@ -2437,6 +2482,9 @@ pre.code {
       }
     }
     if (tgtDoc && opts.rules.keepAdmins && ctxs.length) ruleKeepAdmins(ctxs[0]);
+    else if (ctxs.length) ruleSystemAccounts(ctxs[0]);
+    // i nodi presi dalla config del PA-500 possono portare gli stessi marcatori
+    if (tgtDoc) candidateMarkers(doc, null);
     const ruleHits = applyCustomRules(doc, opts.customRules, R);
     for (const ctx of ctxs) if (opts.rules.ha) haChecks(ctx);
     secretsCheck(doc, R);
