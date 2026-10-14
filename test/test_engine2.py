@@ -14,8 +14,29 @@ ARE_SRC = """<config version="11.1.0"><devices><entry name="localhost.localdomai
 <vsys><entry name="vsys1"><zone><entry name="ae1"><network><layer3><member>ethernet1/1</member></layer3></network></entry></zone></entry><entry name="vsys2"/></vsys>
 </entry></devices></config>"""
 
+
+IFACE_SRC = """<config version="11.1.0">
+<shared><address><entry name="ethernet1/1"><ip-netmask>192.0.2.10/32</ip-netmask></entry></address>
+<address-group><entry name="same-name-group"><static><member>ethernet1/1</member></static></entry></address-group></shared>
+<devices><entry name="localhost.localdomain"><network>
+<interface><ethernet>
+<entry name="ethernet1/1"><comment>ethernet1/1</comment><layer3><ip><entry name="10.0.0.1/24"/></ip><units><entry name="ethernet1/1.10"><tag>10</tag></entry></units></layer3></entry>
+<entry name="ethernet1/2"><layer3/></entry>
+</ethernet></interface>
+<dhcp><interface><entry name="ethernet1/1.10"><server/></entry></interface></dhcp>
+<virtual-router><entry name="default"><interface><member>ethernet1/1</member><member>ethernet1/1.10</member></interface>
+<routing-table><ip><static-route><entry name="r1"><destination>203.0.113.0/24</destination><interface>ethernet1/1</interface></entry></static-route></ip></routing-table>
+<protocol><ospf><area><entry name="0.0.0.0"><interface><entry name="ethernet1/1"><enable>yes</enable></entry></interface></entry></area></ospf></protocol>
+</entry></virtual-router>
+<ike><gateway><entry name="gw1"><local-address><interface>ethernet1/1</interface></local-address></entry></gateway></ike>
+</network>
+<vsys><entry name="vsys1"><import><network><interface><member>ethernet1/1</member></interface></network></import>
+<zone><entry name="trust"><network><layer3><member>ethernet1/1</member><member>ethernet1/1.10</member></layer3></network></entry></zone>
+<rulebase><security><rules><entry name="same-name-rule"><description>ethernet1/1</description><from><member>trust</member></from><to><member>trust</member></to><source><member>any</member></source><destination><member>ethernet1/1</member></destination><application><member>any</member></application><service><member>application-default</member></service><action>allow</action></entry></rules></security></rulebase>
+</entry></vsys></entry></devices></config>"""
+
 JS = """
-([src, are]) => {
+([src, are, iface]) => {
   const out = {};
   const run = (xml, opts) => PA500.run(PA500.parse(xml), Object.assign({ model: 'PA-550', map: {}, customRules: [],
       rules: { are: true, dyn: true, ifaces: true, ha: true, poe: true, keepMgmt: false, keepHA: false, keepAdmins: false } }, opts), null);
@@ -70,6 +91,45 @@ JS = """
     zoneUntrust: PA500.evalXPath(r5.doc, "//zone/entry[@name='untrust']/network/layer3/member")[0].textContent,
     unit: PA500.evalXPath(r5.doc, "//ethernet/entry[@name='ethernet1/1']/layer3/units/entry/@name").map(a => a.value),
     dhcp: PA500.evalXPath(r5.doc, "//dhcp/interface/entry/@name").map(a => a.value) };
+
+  // 5. riferimenti tipizzati: oggetti/testo omonimi devono restare intatti
+  const ifRules = { are: false, dyn: false, ifaces: true, ha: false, poe: false, keepMgmt: false, keepHA: false, keepAdmins: false };
+  const val = (doc, xp) => PA500.evalXPath(doc, xp).map(n => n.value !== undefined ? n.value : n.textContent.trim());
+  const r6 = run(iface, { map: { 'ethernet1/1': 'ethernet1/3' }, rules: ifRules });
+  const r7 = run(iface, { map: { 'ethernet1/1': '__drop__' }, rules: ifRules });
+  out.typedRename = {
+    iface: val(r6.doc, "//network/interface/ethernet/entry/@name"),
+    unit: val(r6.doc, "//network/interface/ethernet/entry/layer3/units/entry/@name"),
+    dhcp: val(r6.doc, "//dhcp/interface/entry/@name"),
+    vr: val(r6.doc, "//virtual-router/entry/interface/member"),
+    ospf: val(r6.doc, "//protocol/ospf/area/entry/interface/entry/@name"),
+    route: val(r6.doc, "//static-route/entry/interface"),
+    ike: val(r6.doc, "//ike/gateway/entry/local-address/interface"),
+    zone: val(r6.doc, "//zone/entry/network/layer3/member"),
+    imp: val(r6.doc, "//vsys/entry/import/network/interface/member"),
+    object: PA500.evalXPath(r6.doc, "//shared/address/entry[@name='ethernet1/1']").length,
+    group: val(r6.doc, "//shared/address-group/entry/static/member"),
+    policy: val(r6.doc, "//rulebase/security/rules/entry/destination/member"),
+    description: val(r6.doc, "//rulebase/security/rules/entry/description"),
+    comment: val(r6.doc, "//network/interface/ethernet/entry[@name='ethernet1/3']/comment"),
+    checks: r6.report.filter(i => i.area === 'Interfacce' && i.level === 'check').length
+  };
+  out.typedDrop = {
+    iface: val(r7.doc, "//network/interface/ethernet/entry/@name"),
+    dhcp: val(r7.doc, "//dhcp/interface/entry/@name"),
+    vr: val(r7.doc, "//virtual-router/entry/interface/member"),
+    ospf: val(r7.doc, "//protocol/ospf/area/entry/interface/entry/@name"),
+    route: val(r7.doc, "//static-route/entry/interface"),
+    ike: val(r7.doc, "//ike/gateway/entry/local-address/interface"),
+    zone: val(r7.doc, "//zone/entry/network/layer3/member"),
+    imp: val(r7.doc, "//vsys/entry/import/network/interface/member"),
+    object: PA500.evalXPath(r7.doc, "//shared/address/entry[@name='ethernet1/1']").length,
+    group: val(r7.doc, "//shared/address-group/entry/static/member"),
+    policy: val(r7.doc, "//rulebase/security/rules/entry/destination/member"),
+    description: val(r7.doc, "//rulebase/security/rules/entry/description"),
+    errors: r7.report.filter(i => i.area === 'Interfacce' && i.level === 'error').map(i => i.msg),
+    checks: r7.report.filter(i => i.area === 'Interfacce' && i.level === 'check').length
+  };
   return out;
 }
 """
@@ -86,7 +146,7 @@ with sync_playwright() as p:
     page = b.new_page()
     page.set_content('<html><body></body></html>')
     page.add_script_tag(content=ENGINE)
-    r = page.evaluate(JS, [SRC, ARE_SRC])
+    r = page.evaluate(JS, [SRC, ARE_SRC, IFACE_SRC])
     b.close()
 
 # 1. regole personalizzate
@@ -126,6 +186,40 @@ check(sw['errors'] == [], 'scambio di porte con errori: %s' % sw['errors'])
 check(sw['zoneUntrust'] == 'ethernet1/2', 'zona untrust: %r' % sw['zoneUntrust'])
 check(sw['unit'] == ['ethernet1/1.10', 'ethernet1/1.20'], 'sub-interfacce dopo lo scambio: %s' % sw['unit'])
 check(sw['dhcp'] == ['ethernet1/1.10', 'ethernet1/9'], 'DHCP dopo lo scambio: %s' % sw['dhcp'])
+
+# 5. rinomina/esclusione: solo riferimenti tipizzati, nessuna corruzione di oggetti omonimi
+rn = r['typedRename']
+check('ethernet1/3' in rn['iface'] and 'ethernet1/1' not in rn['iface'], 'rinomina definizione fisica: %s' % rn['iface'])
+check(rn['unit'] == ['ethernet1/3.10'], 'rinomina subinterfaccia: %s' % rn['unit'])
+check(rn['dhcp'] == ['ethernet1/3.10'], 'rinomina DHCP: %s' % rn['dhcp'])
+check(rn['vr'] == ['ethernet1/3', 'ethernet1/3.10'], 'rinomina router: %s' % rn['vr'])
+check(rn['ospf'] == ['ethernet1/3'], 'rinomina OSPF: %s' % rn['ospf'])
+check(rn['route'] == ['ethernet1/3'], 'rinomina static route: %s' % rn['route'])
+check(rn['ike'] == ['ethernet1/3'], 'rinomina IKE local-address: %s' % rn['ike'])
+check(rn['zone'] == ['ethernet1/3', 'ethernet1/3.10'], 'rinomina zona: %s' % rn['zone'])
+check(rn['imp'] == ['ethernet1/3'], 'rinomina import vsys: %s' % rn['imp'])
+check(rn['object'] == 1, 'address object omonimo rinominato')
+check(rn['group'] == ['ethernet1/1'], 'address-group omonimo modificato: %s' % rn['group'])
+check(rn['policy'] == ['ethernet1/1'], 'membro policy omonimo modificato: %s' % rn['policy'])
+check(rn['description'] == ['ethernet1/1'], 'descrizione omonima modificata: %s' % rn['description'])
+check(rn['comment'] == ['ethernet1/1'], 'commento interfaccia modificato: %s' % rn['comment'])
+check(rn['checks'] >= 4, 'match omonimi non segnalati in rinomina: %s' % rn['checks'])
+
+dp = r['typedDrop']
+check(dp['iface'] == ['ethernet1/2'], 'esclusione definizione fisica: %s' % dp['iface'])
+check(dp['dhcp'] == [], 'riferimento DHCP alla porta esclusa rimasto: %s' % dp['dhcp'])
+check(dp['vr'] == [], 'riferimenti router alla porta esclusa rimasti: %s' % dp['vr'])
+check(dp['ospf'] == [], 'riferimento OSPF alla porta esclusa rimasto: %s' % dp['ospf'])
+check(dp['route'] == [], 'riferimento static route alla porta esclusa rimasto: %s' % dp['route'])
+check(dp['ike'] == [], 'riferimento IKE alla porta esclusa rimasto: %s' % dp['ike'])
+check(dp['zone'] == [], 'riferimenti zona alla porta esclusa rimasti: %s' % dp['zone'])
+check(dp['imp'] == [], 'riferimento import vsys alla porta esclusa rimasto: %s' % dp['imp'])
+check(dp['object'] == 1, 'address object omonimo eliminato')
+check(dp['group'] == ['ethernet1/1'], 'address-group omonimo alterato: %s' % dp['group'])
+check(dp['policy'] == ['ethernet1/1'], 'membro policy omonimo alterato: %s' % dp['policy'])
+check(dp['description'] == ['ethernet1/1'], 'descrizione omonima alterata: %s' % dp['description'])
+check(dp['errors'] == [], 'errori residui su riferimenti tipizzati: %s' % dp['errors'])
+check(dp['checks'] >= 3, 'match omonimi non segnalati in esclusione: %s' % dp['checks'])
 
 print('test_engine2: %d verifiche fallite' % len(FAILS) if FAILS else 'test_engine2: tutte le verifiche passate')
 sys.exit(1 if FAILS else 0)
