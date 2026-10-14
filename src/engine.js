@@ -1905,7 +1905,9 @@
         'load config partial mode replace from-xpath ' + base + '/vsys to-xpath /config/' + base + '/vsys from ' + f,
         'set deviceconfig setting advance-routing yes',
         'validate full'
-      ].join('\n')
+      ].join('\n'),
+      // residuo di caricamenti parziali dalla config originale: con l'ARE non si usa
+      cleanup: ['configure', 'show network virtual-router', 'delete network virtual-router', 'validate full'].join('\n')
     };
   }
 

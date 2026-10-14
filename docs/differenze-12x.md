@@ -90,9 +90,13 @@ Confronto tra l'uscita dello strumento, applicato a una config 10.1.14, e la con
 
 **Fatto da PAN-OS** (default dei campi nuovi): `local-inline-cat` e `cloud-inline-cat` in tutti i profili URL Filtering, `bypass-web-proxy-authentication` nelle regole di authentication, `content-preview` in `shared`, i blocchi `bgp`, `ospf`, `ospfv3`, `rip` e `multicast` disattivati nella VRF.
 
+L'ECMP del logical router è scritto con i default espliciti (`enable` `no`, `max-path` 2, `symmetric-return` e `strict-source-path` `no`) e senza `algorithm`, che lo strumento copia dalla sorgente (`ip-modulo`). Non è stato modificato a mano. ECMP resta spento e `ip-modulo` è comunque il metodo predefinito, quindi non serve nessuna azione. Un PA-550 12.1.7 tiene invece l'`algorithm`.
+
 **Corretto a mano dopo lo strumento:**
 - tolto `mlav-engine-urlbased-enabled` da 10 profili URL Filtering, tutti con azione `allow`. Ora lo fa lo strumento;
 - tolte due regole deny che usavano le EDL predefinite `panw-*` insieme a EDL personalizzate. Ora lo strumento le segnala. È meglio installare i contenuti e tenere le regole: togliendole si perde anche il blocco sulle EDL personalizzate.
+
+**Residuo dei caricamenti parziali:** nella config finale c'è anche il virtual router legacy della sorgente, con le stesse route e interfacce del logical router e le admin distance legacy. Non viene dallo strumento, ma da caricamenti parziali fatti dalla config originale. Con l'Advanced Routing viene ignorato ma resta nella config. La scheda «Caricamento» ora spiega di caricare solo dal file convertito e dà i comandi per cancellarlo (`delete network virtual-router`).
 
 `test/test_migrazione_101.py` riproduce questi casi con dati sintetici.
 

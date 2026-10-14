@@ -623,6 +623,9 @@
       h('li', null,
         h('p', null, 'Oppure caricamento parziale: sostituisce solo oggetti condivisi, rete e vsys, e lascia intatti management, HA e amministratori del PA-500.'),
         codeBlock(cmds.partial)),
+      h('li', null,
+        h('p', null, 'Carica le sezioni solo da questo file. Un caricamento parziale dalla config originale riporta il virtual router legacy: con l\'Advanced Routing viene ignorato, ma resta nella config con route e interfacce doppie. Se c\'è, cancellalo:'),
+        codeBlock(cmds.cleanup)),
       h('li', null, h('p', null, 'Dalla 12.1 il caricamento di una config salvata chiede conferma e scarta le modifiche non salvate: esegui il commit di quelle pendenti prima di caricare, e dopo ogni caricamento parziale.')),
       h('li', null, h('p', null, 'Se validate restituisce errori, incollali al passo 4. Quando è pulito, esegui il commit.'))));
   }
