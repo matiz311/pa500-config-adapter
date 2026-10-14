@@ -1049,15 +1049,21 @@ pre.code {
       R.add('done', area, 'Impostato `deviceconfig/setting/advance-routing` = yes (sui PA-500 non si può disattivare).');
     }
 
-    for (const vsys of all(dev, 'vsys/entry')) {
+    const vsyses = all(dev, 'vsys/entry');
+    for (const vsys of vsyses) {
       const imp = at(vsys, 'import/network/virtual-router');
       if (!imp) continue;
       const netImp = imp.parentNode;
+      if (vsyses.length === 1) {
+        detach(imp);
+        R.add('done', area, 'vsys `' + nameOf(vsys) + '`: rimosso l\'import del virtual router; nelle configurazioni single-vsys il PA-500 usa il logical router senza importarlo nella vsys.');
+        continue;
+      }
       const lrImp = kid(netImp, 'logical-router') || add(netImp, 'logical-router');
       const have = new Set(members(lrImp));
       for (const m of members(imp)) if (!have.has(m)) add(lrImp, 'member', m);
       detach(imp);
-      R.add('done', area, 'vsys `' + nameOf(vsys) + '`: import dei router aggiornato da `virtual-router` a `logical-router`.');
+      R.add('done', area, 'vsys `' + nameOf(vsys) + '`: import dei router aggiornato da `virtual-router` a `logical-router` (configurazione multi-vsys).');
     }
     void opts;
   }
