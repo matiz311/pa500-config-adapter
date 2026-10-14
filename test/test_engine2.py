@@ -14,6 +14,27 @@ ARE_SRC = """<config version="11.1.0"><devices><entry name="localhost.localdomai
 <vsys><entry name="vsys1"><zone><entry name="ae1"><network><layer3><member>ethernet1/1</member></layer3></network></entry></zone></entry><entry name="vsys2"/></vsys>
 </entry></devices></config>"""
 
+
+IFACE_SRC = """<config version="11.1.0">
+<shared><address><entry name="ethernet1/1"><ip-netmask>192.0.2.10/32</ip-netmask></entry></address>
+<address-group><entry name="same-name-group"><static><member>ethernet1/1</member></static></entry></address-group></shared>
+<devices><entry name="localhost.localdomain"><network>
+<interface><ethernet>
+<entry name="ethernet1/1"><comment>ethernet1/1</comment><layer3><ip><entry name="10.0.0.1/24"/></ip><units><entry name="ethernet1/1.10"><tag>10</tag></entry></units></layer3></entry>
+<entry name="ethernet1/2"><layer3/></entry>
+</ethernet></interface>
+<dhcp><interface><entry name="ethernet1/1.10"><server/></entry></interface></dhcp>
+<virtual-router><entry name="default"><interface><member>ethernet1/1</member><member>ethernet1/1.10</member></interface>
+<routing-table><ip><static-route><entry name="r1"><destination>203.0.113.0/24</destination><interface>ethernet1/1</interface></entry></static-route></ip></routing-table>
+<protocol><ospf><area><entry name="0.0.0.0"><interface><entry name="ethernet1/1"><enable>yes</enable></entry></interface></entry></area></ospf></protocol>
+</entry></virtual-router>
+<ike><gateway><entry name="gw1"><local-address><interface>ethernet1/1</interface></local-address></entry></gateway></ike>
+</network>
+<vsys><entry name="vsys1"><import><network><interface><member>ethernet1/1</member></interface></network></import>
+<zone><entry name="trust"><network><layer3><member>ethernet1/1</member><member>ethernet1/1.10</member></layer3></network></entry></zone>
+<rulebase><security><rules><entry name="same-name-rule"><description>ethernet1/1</description><from><member>trust</member></from><to><member>trust</member></to><source><member>any</member></source><destination><member>ethernet1/1</member></destination><application><member>any</member></application><service><member>application-default</member></service><action>allow</action></entry></rules></security></rulebase>
+</entry></vsys></entry></devices></config>"""
+
 JS = """
 ([src, are]) => {
   const out = {};
