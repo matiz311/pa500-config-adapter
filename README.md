@@ -61,6 +61,8 @@ test/              test in Chromium headless e config di prova sintetiche
 
 ```sh
 python3 build.py                      # rigenera dist/pa500-adattatore.html
+python3 build.py --check              # verifica che dist sia aggiornato, senza modificarlo
+python3 test/test_build.py -v         # test della build, nessuna dipendenza esterna
 pip install playwright pyyaml
 python3 -m playwright install chromium
 python3 test/test_engine.py           # conversioni e validazione contro lo schema ARE
@@ -74,6 +76,10 @@ python3 test/perf.py                  # tempi su una config sintetica da circa 6
 ```
 
 `test/are_schema.json` contiene i percorsi XML ammessi sotto `network/logical-router` e `network/routing-profile`. È generato con `test/build_schema.py` dagli schemi di [pan-os-codegen](https://github.com/PaloAltoNetworks/pan-os-codegen) (licenza MIT, © Palo Alto Networks). I nomi `advance-routing` e `import/network/logical-router` vengono da [pan-os-python](https://github.com/PaloAltoNetworks/pan-os-python).
+
+Il workflow **Build integrity** verifica build e file distribuito su Linux e Windows.
+Le suite Chromium restano separate: vedere [CONTRIBUTING.md](CONTRIBUTING.md)
+per controlli, criteri di modifica e prossimi interventi di manutenzione.
 
 ## Riferimenti
 
