@@ -27,7 +27,7 @@ git log --format='%h %ad %<(9)%(trailers:key=Agente,valueonly,separator=%x2C) %s
 
 ### Branch e pull request
 
-- Ogni agente lavora su un branch suo: `claude/<argomento>` oppure `chatgpt/<argomento>`.
+- Ogni agente lavora su un branch suo: `claude/<argomento>` per Claude, `chatgpt/<argomento>` oppure `codex/<argomento>` per ChatGPT (Codex usa `codex/` di default).
 - Le modifiche arrivano su `main` con una pull request che porta l'etichetta `agent:claude` o `agent:chatgpt` e compila il campo «Agente» del modello.
 - Il merge lo fa il proprietario, oppure l'agente autore se il proprietario l'ha chiesto e i test passano.
 
