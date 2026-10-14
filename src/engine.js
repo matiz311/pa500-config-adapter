@@ -1162,42 +1162,77 @@
   }
 
   function dropInterfaces(ctx, keys) {
-    const { dev, doc, R } = ctx;
+    const { doc, R } = ctx;
     const area = 'Interfacce';
     const re = nameRegex(keys);
     const removed = [];
-    // definizioni e voci con il nome dell'interfaccia sotto network (DHCP, QoS, OSPF, ...)
+    const unknown = [];
+
+    // Elimina solo entry il cui attributo name è un riferimento/definizione di interfaccia noto.
     const entries = Array.from(doc.documentElement.getElementsByTagName('entry'));
     for (const e of entries) {
       const nm = e.getAttribute('name');
       if (nm == null || !re.test(nm) || !e.parentNode) continue;
-      if (!underNetwork(e) && !underInterfaceTree(e)) continue;
+      if (!isInterfaceNameRef(e)) {
+        unknown.push({ el: e, value: nm, kind: 'nome' });
+        continue;
+      }
       let inside = false;
-      for (let p = e.parentNode; p && p.nodeType === 1; p = p.parentNode) if (p.tagName === 'entry' && re.test(p.getAttribute('name') || '')) { inside = true; break; }
-      if (!inside && !underInterfaceTree(e)) removed.push(humanPath(e));
+      for (let p = e.parentNode; p && p.nodeType === 1; p = p.parentNode) {
+        if (p.tagName === 'entry' && re.test(p.getAttribute('name') || '') && isInterfaceNameRef(p)) {
+          inside = true;
+          break;
+        }
+      }
+      if (!inside) removed.push(humanPath(e));
       detach(e);
     }
-    let nMembers = 0;
-    for (const m of Array.from(doc.documentElement.getElementsByTagName('member'))) {
-      if (re.test(m.textContent.trim())) { detach(m); nMembers++; }
-    }
-    for (const g of Array.from(doc.documentElement.getElementsByTagName('aggregate-group'))) {
-      if (re.test(g.textContent.trim())) {
-        const eth = g.parentNode;
-        detach(g);
-        R.add('check', area, '`' + nameOf(eth) + '` era membro di un\'aggregata esclusa: ora non è configurata.');
+
+    // Elimina i soli riferimenti foglia tipizzati. Testo libero e oggetti omonimi restano intatti.
+    let nRefs = 0;
+    const leaves = Array.from(doc.documentElement.getElementsByTagName('*'));
+    for (const el of leaves) {
+      if (!el.parentNode || el.firstElementChild) continue;
+      const t = el.textContent.trim();
+      if (!t || !re.test(t)) continue;
+      if (isHaPort(el)) continue; // viene gestita dalla regola HA, che conosce il contesto della porta
+      if (!isInterfaceTextRef(el)) {
+        unknown.push({ el, value: t, kind: 'valore' });
+        continue;
+      }
+      if (el.tagName === 'aggregate-group') {
+        const eth = el.parentNode;
+        detach(el);
+        nRefs++;
+        R.add('check', area, (nameOf(eth) || 'Interfaccia') + ' era membro di un aggregato escluso: ora non ha aggregate-group configurato.');
+      } else {
+        detach(el);
+        nRefs++;
       }
     }
-    R.add('done', area, 'Escluse ' + keys.map(k => '`' + k + '`').join(', ') + ': rimosse le definizioni e ' + nMembers + ' riferimenti in liste (zone, router, ...).');
-    for (const p of removed) R.add('check', area, 'Rimossa anche la voce ' + p + '.');
-    const left = [];
-    const els = doc.documentElement.getElementsByTagName('*');
-    for (let i = 0; i < els.length; i++) {
-      const el = els[i];
-      if (!el.firstElementChild && re.test(el.textContent.trim()) && !isHaPort(el)) left.push(el);
+
+    R.add('done', area, 'Escluse ' + keys.join(', ') + ': rimosse solo definizioni e riferimenti tipizzati (' + nRefs + ' riferimenti foglia).');
+    for (const p of removed) R.add('check', area, 'Rimossa la voce di interfaccia ' + p + '.');
+
+    const seen = new Set();
+    for (const it of unknown) {
+      const p = humanPath(it.el);
+      const sig = it.kind + '|' + p + '|' + it.value;
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      R.add('check', area, 'Preservato ' + it.kind + ' omonimo a una porta esclusa in ' + p + ' (' + it.value + '): il percorso non è riconosciuto come riferimento di interfaccia.');
     }
-    for (const el of left) R.add('error', area, 'Riferimento a un\'interfaccia esclusa in ' + humanPath(el) + ' (`' + el.textContent.trim() + '`): correggilo o assegna una porta invece di escluderla.', { xpath: xpathOf(el) });
-    void dev;
+
+    // Qualunque riferimento tipizzato rimasto dopo la pulizia è un errore reale.
+    const left = [];
+    for (const el of Array.from(doc.documentElement.getElementsByTagName('*'))) {
+      if (!el.firstElementChild && re.test(el.textContent.trim()) && !isHaPort(el) && isInterfaceTextRef(el)) left.push(el);
+    }
+    for (const el of left) R.add('error', area, 'Riferimento tipizzato a un interfaccia esclusa rimasto in ' + humanPath(el) + ' (' + el.textContent.trim() + ').', { xpath: xpathOf(el) });
+    for (const e of Array.from(doc.documentElement.getElementsByTagName('entry'))) {
+      const nm = e.getAttribute('name');
+      if (nm && re.test(nm) && isInterfaceNameRef(e)) R.add('error', area, 'Definizione o riferimento di interfaccia esclusa rimasto in ' + humanPath(e) + ' (' + nm + ').', { xpath: xpathOf(e) });
+    }
   }
 
   // ------------------------------------------------------------------ regola: HA
