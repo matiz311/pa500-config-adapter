@@ -112,6 +112,18 @@ with sync_playwright() as p:
     dp.set_input_files('input[data-file=src]', str(HERE / 'src-pa3220.xml'))
     dp.wait_for_timeout(500)
     dp.screenshot(path=str(SHOTS / '06-scuro.png'), full_page=False)
+
+    # 9) nessuna connessione in uscita: la CSP blocca fetch anche con la pagina pubblicata online
+    csp = dp.get_attribute('meta[http-equiv="Content-Security-Policy"]', 'content') or ''
+    if "connect-src 'none'" not in csp:
+        problems.append('CSP senza connect-src none: %r' % csp)
+    esito = dp.evaluate("""() => new Promise(res => {
+      document.addEventListener('securitypolicyviolation', e => res(e.effectiveDirective), { once: true });
+      fetch('https://example.com/x').catch(() => {});
+      setTimeout(() => res('nessuna violazione'), 3000);
+    })""")
+    if esito != 'connect-src':
+        problems.append('fetch verso l\'esterno non bloccato dalla CSP: %s' % esito)
     b.close()
 
 print('problemi:', problems or 'nessuno')

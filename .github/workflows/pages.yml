@@ -1,0 +1,70 @@
+name: Pubblicazione su GitHub Pages
+
+# Pubblica dist/pa500-adattatore.html come pagina del repository dopo che
+# «Attribuzione e test» è passato su main, oppure a mano (Run workflow).
+# Finché GitHub Pages non è attivo (Settings > Pages > Source: GitHub Actions)
+# il workflow si ferma con un avviso, senza fallire.
+
+on:
+  workflow_run:
+    workflows: ["Attribuzione e test"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  controllo:
+    name: Test passati e Pages attivo
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: read
+    outputs:
+      attivo: ${{ steps.pages.outputs.attivo }}
+    steps:
+      - name: GitHub Pages è attivo?
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh api "repos/$REPO/pages" > /dev/null 2>&1; then
+            echo "attivo=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "attivo=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages non è attivo: Settings > Pages > Source «GitHub Actions», poi rilancia questo workflow."
+          fi
+
+  pubblica:
+    name: Pubblica la pagina
+    needs: controllo
+    if: github.event_name == 'workflow_dispatch' || needs.controllo.outputs.attivo == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Prepara il sito
+        run: |
+          mkdir -p _site
+          cp dist/pa500-adattatore.html _site/index.html
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site/
+      - id: deploy
+        uses: actions/deploy-pages@v5
