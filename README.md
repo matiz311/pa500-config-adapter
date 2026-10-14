@@ -68,6 +68,7 @@ python3 test/test_engine2.py          # regole personalizzate, errori di commit,
 python3 test/test_ha.py               # link HA: porte condivise, management, backup, subnet
 python3 test/test_riferimento_are.py   # una config con la struttura di un PA-550 in produzione resta invariata
 python3 test/test_versioni.py         # adeguamento alla 12.1 in base alla versione della sorgente
+python3 test/test_migrazione_102.py   # migrazione reale 10.2.16 → 12.1 riprodotta con dati sintetici
 python3 test/test_ui.py               # percorso completo nella pagina, mobile e tema scuro
 python3 test/perf.py                  # tempi su una config sintetica da circa 6 MB
 ```

@@ -55,6 +55,7 @@ python3 test/test_engine2.py
 python3 test/test_ha.py
 python3 test/test_riferimento_are.py
 python3 test/test_versioni.py
+python3 test/test_migrazione_102.py
 python3 test/test_ui.py
 ```
 

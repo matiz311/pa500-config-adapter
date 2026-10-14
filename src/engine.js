@@ -542,6 +542,12 @@
     const proto = kid(vr, 'protocol');
     const ospfOn = txt(proto, 'ospf/enable') === 'yes';
     const ospf3On = txt(proto, 'ospfv3/enable') === 'yes';
+    // l'export legacy scrive le admin distance anche quando sono ai default: la distanza OSPF interna
+    // al default legacy (30) con il protocollo spento non va portata, nell'ARE vale il default 110
+    const idle = [];
+    if (!ospfOn && adSet['ospf-intra'] === '30') { delete adSet['ospf-intra']; delete adSet['ospf-inter']; idle.push('OSPF'); }
+    if (!ospf3On && adSet['ospfv3-intra'] === '30') { delete adSet['ospfv3-intra']; delete adSet['ospfv3-inter']; idle.push('OSPFv3'); }
+    if (idle.length) R.add('info', area, '`' + name + '`: ' + idle.join(' e ') + ' disattivato: la distanza interna resta al default ARE (110) invece del 30 legacy, come nei logical router creati da PAN-OS.');
     if (ospfOn && !(ad && kid(ad, 'ospf-int'))) {
       adSet['ospf-intra'] = '30'; adSet['ospf-inter'] = '30';
       R.add('check', 'OSPF', '`' + name + '`: impostata admin distance OSPF interna a 30 come nel motore legacy (nell\'ARE il valore predefinito è 110). Toglila se vuoi i default ARE.');
@@ -562,9 +568,16 @@
       const routes = all(vr, 'routing-table/' + fam + '/static-route/entry');
       if (!routes.length) continue;
       let sr = null;
+      const used = new Set(routes.map(nameOf).filter(n => !/\s/.test(n)));
       for (const r of routes) {
         const out = convertStaticRoute(ctx, r, name, fam);
         if (!out) continue;
+        const orig = nameOf(r);
+        if (/\s/.test(orig) || !/^[A-Za-z0-9_-]/.test(orig)) {
+          const nn = routeName(orig, used);
+          out.setAttribute('name', nn);
+          R.add('done', area, '`' + name + '` / ' + (fam === 'ip' ? 'IPv4' : 'IPv6') + ' `' + orig + '` rinominata `' + nn + '`: nell\'Advanced Routing il nome di una static route non può contenere spazi.');
+        }
         if (!sr) sr = ensure(vrf, 'routing-table/' + fam + '/static-route');
         sr.appendChild(out);
         nStatic++;
@@ -579,19 +592,23 @@
     }
 
     if (proto) {
+      const off = [];
       for (const p of kids(proto)) {
         const enabled = txt(p, 'enable');
         const meaningful = p.firstElementChild && !(enabled === 'no' && kids(p).length === 1);
         if (!meaningful && p.tagName !== 'redist-profile') continue;
+        // un protocollo spento con le sole impostazioni di default (l'export legacy le scrive comunque) non va convertito
+        if (enabled !== 'yes' && !p.tagName.startsWith('redist-profile') && !protocolContent(p)) { off.push(p.tagName.toUpperCase()); continue; }
         if (p.tagName === 'bgp' && opts.rules.dyn) convertBGP(ctx, { vr, vrName: name, lb: p, vrf, rp });
         else if (p.tagName === 'ospf' && opts.rules.dyn) convertOSPF(ctx, { vr, vrName: name, lo: p, vrf, rp });
         else if (p.tagName === 'redist-profile' || p.tagName === 'redist-profile-ipv6') {
           if (!opts.rules.dyn && kids(p, 'entry').length) R.add('manual', area, '`' + name + '`: redistribution profile legacy da ricreare con i profili di redistribuzione e le route map dell\'ARE.', { xml: snippet(p) });
         } else {
           R.add('manual', p.tagName === 'bgp' ? 'BGP' : p.tagName.startsWith('ospf') ? 'OSPF' : area,
-            '`' + name + '`: ' + p.tagName.toUpperCase() + (enabled === 'yes' ? ' (attivo)' : '') + ' da ricostruire a mano nel logical router.', { xml: snippet(p) });
+            '`' + name + '`: ' + p.tagName.toUpperCase() + (enabled === 'yes' ? ' (attivo)' : ' (disattivato, ma configurato)') + ' da ricostruire a mano nel logical router.', { xml: snippet(p) });
         }
       }
+      if (off.length) R.add('info', area, '`' + name + '`: ' + off.join(', ') + ' disattivati e senza configurazione: non convertiti.');
     }
 
     if (proto && opts.rules.dyn) {
@@ -608,6 +625,28 @@
       if (!known.has(c.tagName) && hasContent(c)) R.add('check', area, '`' + name + '`: elemento `' + c.tagName + '` non gestito, non copiato.', { xml: snippet(c, 2000) });
     }
     return lr;
+  }
+
+  /** Un protocollo legacy ha configurazione vera (aree, peer, interfacce, regole) oltre ai default? */
+  function protocolContent(p) {
+    const paths = {
+      bgp: ['peer-group/entry', 'redist-rules/entry', 'policy/import/rules/entry', 'policy/export/rules/entry', 'policy/aggregation/address/entry', 'policy/conditional-advertisement/policy/entry', 'auth-profile/entry'],
+      ospf: ['area/entry', 'export-rules/entry', 'auth-profile/entry'],
+      ospfv3: ['area/entry', 'export-rules/entry', 'auth-profile/entry'],
+      rip: ['interface/entry', 'export-rules/entry', 'auth-profile/entry']
+    }[p.tagName];
+    if (!paths) return true;
+    return paths.some(x => all(p, x).length > 0) || !!txt(p, 'router-id') || !!txt(p, 'local-as');
+  }
+
+  /** Nome di static route valido nell'ARE: niente spazi (nel motore legacy erano ammessi). */
+  function routeName(name, used) {
+    let n = name.replace(/\s+/g, '_');
+    if (!/^[A-Za-z0-9_-]/.test(n)) n = '_' + n;
+    let out = n, i = 2;
+    while (used.has(out)) out = n + '_' + i++;
+    used.add(out);
+    return out;
   }
 
   function convertStaticRoute(ctx, r, vrName, fam) {
@@ -1408,7 +1447,7 @@
       const names = noVer.map(g => '`' + nameOf(g) + '`').join(', ');
       if (olderThan(v, 11, 2, 0)) {
         for (const g of noVer) setText(ensure(g, 'protocol'), 'version', 'ikev1');
-        R.add('done', area, 'IKE gateway senza versione esplicita (' + names + '): impostata `ikev1`, il default fino alla 11.1. Dalla 11.2 il default è IKEv2 e la VPN non si stabilirebbe con un peer IKEv1.');
+        R.add('done', area, 'IKE gateway senza versione esplicita (' + names + '): impostata `ikev1`, il default fino alla 11.1, come fa PAN-OS caricando una config 10.2. Dalla 11.2 il default è IKEv2 e la VPN non si stabilirebbe con un peer IKEv1.');
       } else if (!v) {
         R.add('check', area, 'IKE gateway senza versione esplicita (' + names + ') e versione della sorgente non indicata: fino alla 11.1 il default era IKEv1, dalla 11.2 è IKEv2. Imposta la versione che usa il peer.');
       }
