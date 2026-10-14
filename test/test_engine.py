@@ -108,6 +108,10 @@ with sync_playwright() as p:
         root = ET.fromstring(r['xml'])
         assert root.find('.//virtual-router') is None or name == 'solo_are_senza_dyn' and False, 'virtual-router residuo'
         assert root.findtext('./devices/entry/deviceconfig/setting/advance-routing') == 'yes'
+        vsyses = root.findall('./devices/entry/vsys/entry')
+        if len(vsyses) == 1:
+            assert root.find('./devices/entry/vsys/entry/import/network/virtual-router') is None, 'virtual-router import residuo nella vsys'
+            assert root.find('./devices/entry/vsys/entry/import/network/logical-router') is None, 'logical-router import non necessario nella config single-vsys'
         if sc['rules']['dyn']:
             ospf_ad = root.find("./devices/entry/network/logical-router/entry[@name='default']/vrf/entry[@name='default']/admin-dists")
             assert ospf_ad is not None, 'admin-dists del logical router default mancanti'
