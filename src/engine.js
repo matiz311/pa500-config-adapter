@@ -1367,6 +1367,89 @@
     R.add('check', 'Piattaforma', 'La config contiene ' + n + ' valori cifrati con la master key del firewall sorgente (' + list + '). Se la sorgente usa una master key personalizzata, impostala uguale sul PA-500 (Device > Master Key and Diagnostics) prima del caricamento, altrimenti chiavi private, PSK e password non si decifrano e il commit fallisce.');
   }
 
+  // ------------------------------------------------------------------ regola: adeguamento alla 12.1
+  /** Versione della sorgente da detail-version (o version) come [maggiore, minore, patch]. */
+  function sourceVersion(doc) {
+    const r = doc.documentElement;
+    const v = r.getAttribute('detail-version') || r.getAttribute('version') || '';
+    const m = /^(\d+)\.(\d+)(?:\.(\d+))?/.exec(v);
+    return m ? { t: [+m[1], +m[2], +(m[3] || 0)], text: v } : null;
+  }
+  function olderThan(v, a, b, c) {
+    if (!v) return false;
+    const x = v.t, y = [a, b, c || 0];
+    for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i];
+    return false;
+  }
+  function sslTlsProfiles(doc) {
+    return Array.from(doc.documentElement.getElementsByTagName('ssl-tls-service-profile'))
+      .filter(c => c.parentNode && (c.parentNode.tagName === 'shared' || (c.parentNode.tagName === 'entry' && c.parentNode.parentNode && c.parentNode.parentNode.tagName === 'vsys')))
+      .flatMap(c => kids(c, 'entry'));
+  }
+  function decryptionProfiles(doc) {
+    return Array.from(doc.documentElement.getElementsByTagName('decryption'))
+      .filter(c => c.parentNode && c.parentNode.tagName === 'profiles')
+      .flatMap(c => kids(c, 'entry'));
+  }
+
+  /**
+   * Cambi di comportamento e di schema tra le release precedenti e la 12.1 che una config
+   * caricata da file non riceve automaticamente (fonti in docs/differenze-12x.md).
+   */
+  function ruleVersion(ctx) {
+    const { doc, dev, R } = ctx;
+    const area = 'Versione';
+    const v = sourceVersion(doc);
+    const label = v ? 'PAN-OS ' + v.text : 'una versione non indicata';
+
+    // IKE: dalla 11.2 un gateway senza versione esplicita usa IKEv2 invece di IKEv1
+    const noVer = all(dev, 'network/ike/gateway/entry').filter(g => !txt(g, 'protocol/version'));
+    if (noVer.length) {
+      const names = noVer.map(g => '`' + nameOf(g) + '`').join(', ');
+      if (olderThan(v, 11, 2, 0)) {
+        for (const g of noVer) setText(ensure(g, 'protocol'), 'version', 'ikev1');
+        R.add('done', area, 'IKE gateway senza versione esplicita (' + names + '): impostata `ikev1`, il default fino alla 11.1. Dalla 11.2 il default è IKEv2 e la VPN non si stabilirebbe con un peer IKEv1.');
+      } else if (!v) {
+        R.add('check', area, 'IKE gateway senza versione esplicita (' + names + ') e versione della sorgente non indicata: fino alla 11.1 il default era IKEv1, dalla 11.2 è IKEv2. Imposta la versione che usa il peer.');
+      }
+    }
+
+    // SSL/TLS service profile
+    const tls = sslTlsProfiles(doc);
+    if (olderThan(v, 11, 1, 0)) {
+      const changed = [];
+      for (const e of tls) {
+        const mx = txt(e, 'protocol-settings/max-version');
+        if (!mx || mx === 'max') { setText(ensure(e, 'protocol-settings'), 'max-version', 'tls1-2'); changed.push('`' + nameOf(e) + '`'); }
+      }
+      if (changed.length) R.add('done', area, 'SSL/TLS service profile con versione massima «Max» (' + changed.join(', ') + '): impostata `tls1-2`, come fa l\'upgrade ufficiale alla 11.1. Con «Max» la 12.1 abiliterebbe TLS 1.3 (anche per GlobalProtect e per la management); alzala a `tls1-3` solo dopo aver verificato i client.');
+    }
+    const renamed = [];
+    for (const e of tls) {
+      const old = at(e, 'protocol-settings/enc-algo-chacha20-poly1305');
+      if (!old) continue;
+      const ps = old.parentNode;
+      const repl = mk(doc, 'enc-algo-aes-chacha20-poly1305', old.textContent.trim());
+      if (!kid(ps, 'enc-algo-aes-chacha20-poly1305')) ps.replaceChild(repl, old); else detach(old);
+      renamed.push('`' + nameOf(e) + '`');
+    }
+    if (renamed.length) R.add('check', area, 'SSL/TLS service profile ' + renamed.join(', ') + ': `enc-algo-chacha20-poly1305` rinominato in `enc-algo-aes-chacha20-poly1305`, il nome usato dalla 11.1 in poi. Il vecchio nome fa fallire il commit («unexpected here»); se validate rifiuta anche il nuovo, toglilo come indica Palo Alto.');
+
+    // Decryption: dalla 12.1 TLS 1.3 in forward proxy solo con i gruppi di scambio chiavi RFC
+    if (olderThan(v, 12, 1, 0)) {
+      const fwd = decryptionProfiles(doc).filter(e => kid(e, 'ssl-forward-proxy') && ['', 'max', 'tls1-3'].includes(txt(e, 'ssl-protocol-settings/max-version') || ''));
+      if (fwd.length) R.add('check', area, 'Decryption profile con SSL Forward Proxy e TLS 1.3 (' + fwd.map(e => '`' + nameOf(e) + '`').join(', ') + '): dalla 12.1 TLS 1.3 si decifra solo con X25519, X448, secp256r1, secp384r1 e secp521r1. Le sessioni verso server che negoziano solo altre curve non si completano; per quei server limita il profilo a TLS 1.2.');
+    }
+
+    // Authentication sequence: comportamento cambiato nella 11.1.1
+    if (olderThan(v, 11, 1, 1)) {
+      const seq = Array.from(doc.documentElement.getElementsByTagName('authentication-sequence')).flatMap(c => kids(c, 'entry'));
+      if (seq.length) R.add('check', area, 'Authentication sequence (' + seq.map(e => '`' + nameOf(e) + '`').join(', ') + '): dalla 11.1.1 «Exit the sequence on failed authentication» non dipende più da «Use domain to determine authentication profile». Verifica che la sequenza si comporti come prima.');
+    }
+    if (!v) R.add('check', area, 'La config non indica la versione di PAN-OS: gli adeguamenti alla 12.1 legati alla versione non sono stati applicati.');
+    else if (!olderThan(v, 12, 1, 0)) R.add('info', area, 'La sorgente è già ' + label + ': nessun adeguamento di versione necessario.');
+  }
+
   function finalScan(ctx) {
     const { doc, R } = ctx;
     const els = doc.documentElement.getElementsByTagName('*');
@@ -1584,6 +1667,7 @@
       if (opts.rules.ifaces) ruleInterfaces(ctx);
       if (opts.rules.ha) ruleHA(ctx);
       if (opts.rules.poe) rulePoE(ctx);
+      if (opts.rules.ver !== false) ruleVersion(ctx);
       if (tdev && opts.rules.keepMgmt) ruleKeepMgmt(ctx);
       platformChecks(ctx);
       if (tdev && all(tdev, 'network/logical-router/entry').length) {

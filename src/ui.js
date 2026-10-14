@@ -47,7 +47,7 @@
     model: saved.model || 'PA-550',
     customPorts: saved.customPorts || '1-8 rj45',
     map: {}, sel: null,
-    rules: Object.assign({ are: true, dyn: true, ifaces: true, ha: true, keepHA: true, poe: true, keepMgmt: true, keepAdmins: false }, saved.rules || {}),
+    rules: Object.assign({ are: true, dyn: true, ifaces: true, ha: true, keepHA: true, ver: true, poe: true, keepMgmt: true, keepAdmins: false }, saved.rules || {}),
     custom: Array.isArray(saved.custom) ? saved.custom.filter(r => r && r.xpath !== undefined) : [],
     limits: saved.limits || {},
     result: null, filter: null, tab: 'report', xpq: '/config/devices/entry/network/logical-router',
@@ -385,6 +385,7 @@
     { id: 'ifaces', title: 'Porte e interfacce', desc: 'Applica la tabella delle porte a tutta la config, sub-interfacce comprese, ed elimina le interfacce escluse con i loro riferimenti.' },
     { id: 'ha', title: 'Alta affidabilità', desc: 'Sposta HA1 e HA2 dalle porte dedicate, che sui PA-500 non ci sono, alle porte dati scelte o alla management, impostandole in modalità HA.' },
     { id: 'keepHA', parent: 'ha', needsTgt: true, title: 'Usa l\'HA già configurato sul PA-500', desc: 'Sostituisce la sezione HA della sorgente con quella del nuovo firewall e ne conserva le porte. Disattivala per portare l\'HA della sorgente sulle porte dati che scegli nella tabella.' },
+    { id: 'ver', title: 'Adeguamento alla 12.1', desc: 'Applica i cambi tra la release della sorgente e la 12.1 che una config caricata da file non riceve: versione IKE esplicita dove valeva il vecchio default, TLS massimo dei profili SSL/TLS come nell\'upgrade ufficiale, nomi di cifrari cambiati. Segnala i cambi di comportamento da verificare.' },
     { id: 'poe', title: 'PoE', desc: 'Toglie le impostazioni PoE dalle porte che sul modello scelto non lo supportano.' },
     { id: 'keepMgmt', needsTgt: true, title: 'Mantieni management e hostname del PA-500', desc: 'IP, maschera, gateway e hostname restano quelli del nuovo firewall, così il caricamento completo non ti chiude fuori.' },
     { id: 'keepAdmins', needsTgt: true, title: 'Mantieni gli amministratori del PA-500', desc: 'Sostituisce utenti e password della sorgente con quelli del nuovo firewall.' }
@@ -622,6 +623,7 @@
       h('li', null,
         h('p', null, 'Oppure caricamento parziale: sostituisce solo oggetti condivisi, rete e vsys, e lascia intatti management, HA e amministratori del PA-500.'),
         codeBlock(cmds.partial)),
+      h('li', null, h('p', null, 'Dalla 12.1 il caricamento di una config salvata chiede conferma e scarta le modifiche non salvate: esegui il commit di quelle pendenti prima di caricare, e dopo ogni caricamento parziale.')),
       h('li', null, h('p', null, 'Se validate restituisce errori, incollali al passo 4. Quando è pulito, esegui il commit.'))));
   }
   function xpathPanel(panel) {

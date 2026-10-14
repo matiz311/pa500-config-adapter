@@ -30,6 +30,7 @@ Le regole personalizzate restano salvate nel browser e si possono esportare e im
 | OSPF | Aree normal, stub e NSSA, range, interfacce, link type, virtual link, autenticazione, timer (in interface timer profile), export rule semplici. |
 | Porte | Rinomina in tutta la config, sub-interfacce comprese; scambio di porte; esclusione con rimozione dei riferimenti; segnala i riferimenti che restano. |
 | HA | Porte HA dedicate (`ha1-a`, `hsci`, …) → porte dati in modalità HA o management. Sulla management toglie IP, maschera e gateway della sezione HA, che PAN-OS non accetta. Segnala link HA sulla stessa porta o nella stessa subnet e il `peer-ip` da aggiornare. Riconosce anche HA1 e HA2 sulle porte dedicate di default (sezione senza `<port>`). Il pulsante «Porte libere all'HA» propone porte dati libere, la più veloce per HA2. In alternativa usa l'HA già configurato sul PA-500. |
+| Versione | Adegua la config alla 12.1 in base alla versione della sorgente: versione IKE esplicita dove valeva il default IKEv1, TLS massimo «Max» dei profili SSL/TLS portato a 1.2 come nell'upgrade ufficiale, cifrario ChaCha20 rinominato; segnala i cambi di comportamento. Dettagli e fonti in [docs/differenze-12x.md](docs/differenze-12x.md). |
 | Piattaforma | Porte inesistenti sul modello, velocità non supportate, aggregate su porte di tipo diverso, PoE, interfacce cellulari, multi-vsys, gestione da Panorama, versione della sorgente, residui del motore legacy. |
 
 Policy BGP, route map e filtri complessi, OSPFv3, RIP e multicast non vengono convertiti: il report li riporta con l'XML originale, da ricreare a mano.
@@ -66,6 +67,7 @@ python3 test/test_engine.py           # conversioni e validazione contro lo sche
 python3 test/test_engine2.py          # regole personalizzate, errori di commit, casi limite
 python3 test/test_ha.py               # link HA: porte condivise, management, backup, subnet
 python3 test/test_riferimento_are.py   # una config con la struttura di un PA-550 in produzione resta invariata
+python3 test/test_versioni.py         # adeguamento alla 12.1 in base alla versione della sorgente
 python3 test/test_ui.py               # percorso completo nella pagina, mobile e tema scuro
 python3 test/perf.py                  # tempi su una config sintetica da circa 6 MB
 ```
