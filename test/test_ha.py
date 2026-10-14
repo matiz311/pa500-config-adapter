@@ -17,13 +17,18 @@ JS = """
     rules: Object.assign({ are: true, dyn: true, ifaces: true, ha: true, poe: true, keepMgmt: false, keepHA: false, keepAdmins: false }, rules) },
     tgt ? PA500.parse(tgt) : null);
   const ha = PA500.evalXPath(r.doc, '/config/devices/entry/deviceconfig/high-availability/interface')[0];
+  const pg = PA500.evalXPath(r.doc, '/config/devices/entry/deviceconfig/high-availability/group/monitoring/path-monitoring/path-group')[0];
   return { items: r.report.filter(i => i.area === 'HA').map(i => i.level + ': ' + i.msg),
-           xml: ha ? PA500.snippet(ha) : '(nessuna sezione HA)', mgmtHa: r.mgmtHa };
+           xml: ha ? PA500.snippet(ha) : '(nessuna sezione HA)', mgmtHa: r.mgmtHa,
+           pathGroup: pg ? PA500.snippet(pg).replace(/>\s+</g, '><') : '' };
 }
 """
 
 # path monitoring HA con virtual router (legacy) e uno vuoto
-SRC_PATHMON = SRC.replace('<monitoring>', '<monitoring><path-monitoring><enabled>yes</enabled><path-group><virtual-router><entry name="default"><enabled>yes</enabled><destination-ip><entry name="gw"><enabled>yes</enabled></entry></destination-ip></entry></virtual-router></path-group></path-monitoring>', 1)
+# struttura dei path group come nell'export di un PA-550 con Advanced Routing (destination-ip-group)
+PATH_ENTRY = ('<entry name="default"><destination-ip-group><entry name="Core"><destination-ip><member>10.0.10.254</member></destination-ip>'
+              '<enabled>yes</enabled><failure-condition>any</failure-condition></entry></destination-ip-group><failure-condition>any</failure-condition></entry>')
+SRC_PATHMON = SRC.replace('<monitoring>', '<monitoring><path-monitoring><enabled>yes</enabled><path-group><virtual-router>' + PATH_ENTRY + '</virtual-router></path-group></path-monitoring>', 1)
 
 # struttura di un PA-550 già in produzione: deve passare senza errori e senza toccare l'HA
 PA550 = (HERE / 'pa550-funzionante.xml').read_text()
@@ -39,7 +44,8 @@ CASES = [
     ('config di un PA-550 funzionante', PA550, None, {}, {},
      lambda r: not any(i.startswith('error') for i in r['items']) and '<port>management</port>' in r['xml'] and r['xml'].count('<ip-address>') == 2),
     ('path group HA convertito', SRC_PATHMON, None, {'ha1-a': 'management', 'ha1-b': 'ethernet1/11', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
-     lambda r: any('logical-router' in i for i in r['items']) and not any(i.startswith('error') for i in r['items'])),
+     lambda r: any('logical-router' in i for i in r['items']) and not any(i.startswith('error') for i in r['items'])
+     and r['pathGroup'] == '<path-group><logical-router>' + PATH_ENTRY + '</logical-router></path-group>'),
     ('entrambe su management', SRC, None, {'ha1-a': 'management', 'ha1-b': 'management', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
      lambda r: any('stessa porta' in i for i in r['items']) and r['mgmtHa'] == ['ha1', 'ha1-backup']),
     ('ha1 su management, backup tolto', SRC, None, {'ha1-a': 'management', 'ha1-b': '__drop__', 'ethernet1/20': 'ethernet1/15', 'ethernet1/21': 'ethernet1/9'}, {},
