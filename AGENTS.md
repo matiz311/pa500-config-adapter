@@ -53,6 +53,7 @@ git log --format='%h %ad %<(9)%(trailers:key=Agente,valueonly,separator=%x2C) %s
 python3 test/test_engine.py
 python3 test/test_engine2.py
 python3 test/test_ha.py
+python3 test/test_riferimento_are.py
 python3 test/test_ui.py
 ```
 

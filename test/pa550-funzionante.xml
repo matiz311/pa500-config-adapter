@@ -39,13 +39,13 @@
         <high-availability>
           <enabled>yes</enabled>
           <interface>
-            <ha1><port>ethernet1/11</port><ip-address>192.168.255.251</ip-address><netmask>255.255.255.248</netmask></ha1>
+            <ha1><port>ethernet1/11</port><ip-address>172.16.255.1</ip-address><netmask>255.255.255.248</netmask></ha1>
             <ha1-backup><port>management</port></ha1-backup>
             <ha2><port>ethernet1/16</port></ha2>
-            <ha2-backup><port>ethernet1/12</port><ip-address>192.168.255.253</ip-address><netmask>255.255.255.248</netmask></ha2-backup>
+            <ha2-backup><port>ethernet1/12</port><ip-address>172.16.255.3</ip-address><netmask>255.255.255.248</netmask></ha2-backup>
           </interface>
           <group>
-            <group-id>1</group-id><peer-ip>192.168.255.252</peer-ip><peer-ip-backup>10.0.254.252</peer-ip-backup>
+            <group-id>1</group-id><peer-ip>172.16.255.2</peer-ip><peer-ip-backup>10.0.254.252</peer-ip-backup>
             <mode><active-passive/></mode>
             <monitoring>
               <path-monitoring><enabled>no</enabled><path-group><virtual-router/></path-group></path-monitoring>

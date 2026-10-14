@@ -36,7 +36,7 @@ Policy BGP, route map e filtri complessi, OSPFv3, RIP e multicast non vengono co
 
 ## Limiti noti
 
-- Non è ancora stata provata su un PA-500 fisico: lancia sempre `validate full` prima del commit.
+- La struttura ARE generata (logical router, static route, path group HA) coincide con quella di un PA-550 in produzione con PAN-OS 12.1.7, riprodotta in forma sintetica in `test/pa550-are-funzionante.xml`. La conversione completa da una config legacy non è ancora stata caricata su un PA-500 (issue #8): lancia sempre `validate full` prima del commit.
 - La numerazione `ethernet1/N` delle porte è dedotta dalla posizione sul pannello frontale descritta nella PA-500 Hardware Reference. Verificala con `show interface all`.
 - L'admin distance OSPF interna viene impostata a 30 come nel motore legacy (il default ARE è 110). Il report lo segnala.
 - I limiti di capacità dei modelli (zone, regole, tunnel) non sono pubblicati in forma verificabile: la scheda «Conteggi» li fa inserire a mano.
@@ -65,6 +65,7 @@ python3 -m playwright install chromium
 python3 test/test_engine.py           # conversioni e validazione contro lo schema ARE
 python3 test/test_engine2.py          # regole personalizzate, errori di commit, casi limite
 python3 test/test_ha.py               # link HA: porte condivise, management, backup, subnet
+python3 test/test_riferimento_are.py   # una config con la struttura di un PA-550 in produzione resta invariata
 python3 test/test_ui.py               # percorso completo nella pagina, mobile e tema scuro
 python3 test/perf.py                  # tempi su una config sintetica da circa 6 MB
 ```

@@ -1080,7 +1080,7 @@ pre.code {
         lr.appendChild(e);
       }
       detach(vr);
-      R.add('check', 'HA', 'Path monitoring HA: i path group `virtual-router` sono diventati `logical-router` (' + kids(lr, 'entry').map(e => '`' + nameOf(e) + '`').join(', ') + '). Verifica destinazioni e IP sorgente al primo commit.', { xml: snippet(lr, 3000) });
+      R.add('done', 'HA', 'Path monitoring HA: i path group `virtual-router` sono diventati `logical-router` (' + kids(lr, 'entry').map(e => '`' + nameOf(e) + '`').join(', ') + '), con la stessa struttura (`destination-ip-group`) che usa un PA-550 con Advanced Routing.', { xml: snippet(lr, 3000) });
     }
   }
 
