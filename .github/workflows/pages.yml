@@ -4,6 +4,8 @@ name: Pubblicazione su GitHub Pages
 # «Attribuzione e test» è passato su main, oppure a mano (Run workflow).
 # Finché GitHub Pages non è attivo (Settings > Pages > Source: GitHub Actions)
 # il workflow si ferma con un avviso, senza fallire.
+# I permessi di job sostituiscono quelli globali: ogni job dichiara anche
+# contents: read, senza il quale il repository privato risulta inesistente.
 
 on:
   workflow_run:
@@ -27,6 +29,7 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: read
     outputs:
       attivo: ${{ steps.pages.outputs.attivo }}
@@ -50,13 +53,14 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.controllo.outputs.attivo == 'true'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Prepara il sito
