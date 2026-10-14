@@ -1416,6 +1416,32 @@
     }
     R.add('done', 'Management', 'Hostname e IP di management presi dal PA-500: `' + (txt(tsys, 'hostname') || '?') + '`, `' + (txt(tsys, 'ip-address') || (kid(at(tsys, 'type'), 'dhcp-client') ? 'DHCP' : '?')) + '`.');
   }
+  /**
+   * Account e impostazioni del PA-500 che un caricamento completo cancella, perché `mgt-config`
+   * arriva dalla sorgente: l'account di sistema `__telemetryuser` (PAN-OS lo ricrea solo al
+   * riavvio) e la complessità minima delle password.
+   */
+  const TELEMETRY_USER = '__telemetryuser';
+  function ruleSystemAccounts(ctx) {
+    const { doc, R } = ctx;
+    const root = doc.documentElement;
+    const tm = ctx.tdoc ? at(ctx.tdoc.documentElement, 'mgt-config') : null;
+    if (!ent(at(root, 'mgt-config/users'), TELEMETRY_USER)) {
+      const tu = ent(at(tm, 'users'), TELEMETRY_USER);
+      if (tu) {
+        cloneTo(ensure(root, 'mgt-config/users'), tu);
+        R.add('done', 'Management', 'Mantenuto l\'account di sistema `' + TELEMETRY_USER + '` del PA-500. La sorgente non lo ha: senza, con la Device Telemetry attiva PAN-OS invia bundle vuoti finché non lo ricrea al riavvio.');
+      } else if (!tm) {
+        // con la config del PA-500 caricata e senza l'account, la release del PA-500 non lo prevede
+        R.add('check', 'Management', 'Dalla 12.1.4-h3 e dalla 12.1.5 PAN-OS ha l\'account di sistema `' + TELEMETRY_USER + '`, che la sorgente non ha. Il caricamento completo lo toglie e PAN-OS lo ricrea solo al riavvio successivo: riavvia il PA-500 dopo il commit, oppure carica qui anche la sua config per conservarlo. Il caricamento parziale non tocca gli amministratori.');
+      }
+    }
+    const pc = kid(tm, 'password-complexity');
+    if (pc && !at(root, 'mgt-config/password-complexity')) {
+      cloneTo(ensure(root, 'mgt-config'), pc);
+      R.add('done', 'Management', 'La sorgente non imposta la complessità minima delle password: mantenuta quella del PA-500 (' + (txt(pc, 'enabled') === 'yes' ? 'attiva' : 'disattivata') + (txt(pc, 'minimum-length') ? ', lunghezza minima ' + txt(pc, 'minimum-length') : '') + '). Vale per le password impostate da ora in poi.');
+    }
+  }
   function ruleKeepAdmins(ctx) {
     const { doc, R } = ctx;
     const tm = at(ctx.tdoc.documentElement, 'mgt-config');
@@ -1504,6 +1530,51 @@
     R.add('check', 'Piattaforma', 'La config contiene ' + n + ' valori cifrati con la master key del firewall sorgente (' + list + '). Se la sorgente usa una master key personalizzata, impostala uguale sul PA-500 (Device > Master Key and Diagnostics) prima del caricamento, altrimenti chiavi private, PSK e password non si decifrano e il commit fallisce.');
   }
 
+  /**
+   * Una candidate salvata con modifiche non committate porta i marcatori di PAN-OS: attributi
+   * `admin`, `dirtyId` e `time` sui nodi modificati e nodi `<deleted>` al posto di quelli cancellati.
+   * Il contenuto è già quello della candidate: i marcatori sono solo metadati delle modifiche.
+   */
+  function candidateMarkers(doc, R) {
+    const who = new Set();
+    let n = 0, del = 0;
+    for (const el of Array.from(doc.documentElement.getElementsByTagName('*'))) {
+      if (!el.hasAttribute('dirtyId')) continue;
+      n++;
+      if (el.getAttribute('admin')) who.add(el.getAttribute('admin'));
+      if (el.tagName === 'deleted' && !el.firstElementChild) { detach(el); del++; continue; }
+      for (const a of ['admin', 'dirtyId', 'time']) el.removeAttribute(a);
+    }
+    if (n && R) R.add('check', 'Piattaforma', 'La config è una candidate con modifiche non ancora committate (' + n + (n === 1 ? ' nodo marcato' : ' nodi marcati') + (who.size ? ', amministratore ' + [...who].map(w => '`' + w + '`').join(', ') : '') + '). Tolti i marcatori di PAN-OS: attributi `admin`, `dirtyId` e `time`' + (del ? ' e ' + del + (del === 1 ? ' nodo' : ' nodi') + ' `deleted`' : '') + '. Il contenuto resta quello della candidate: se quelle modifiche non vanno tenute, esporta la running config.');
+  }
+
+  /**
+   * EDL predefinite di Palo Alto (`panw-*`): arrivano con i contenuti dinamici, quindi su un PA-500
+   * appena inizializzato non esistono e ogni riferimento fa fallire il commit.
+   */
+  const PANW_EDL = /^panw-[a-z0-9-]+-list$/;
+  function predefinedEdlCheck(doc, R) {
+    const defined = new Set(Array.from(doc.documentElement.getElementsByTagName('external-list')).flatMap(c => kids(c, 'entry')).map(nameOf));
+    const where = new Map();
+    const names = new Set();
+    const els = doc.documentElement.getElementsByTagName('*');
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      if (el.firstElementChild) continue;
+      const v = el.textContent.trim();
+      if (!PANW_EDL.test(v) || defined.has(v)) continue;
+      names.add(v);
+      let rule = el.parentNode;
+      while (rule && rule.nodeType === 1 && !(rule.tagName === 'entry' && rule.parentNode && rule.parentNode.tagName === 'rules')) rule = rule.parentNode;
+      const label = rule && rule.nodeType === 1
+        ? rule.parentNode.parentNode.tagName + ' `' + nameOf(rule) + '`'
+        : humanPath(el.parentNode);
+      if (!where.has(label)) where.set(label, xpathOf(rule && rule.nodeType === 1 ? rule : el));
+    }
+    if (!names.size) return;
+    R.add('check', 'Piattaforma', 'Riferimenti alle EDL predefinite di Palo Alto (' + [...names].sort().map(n => '`' + n + '`').join(', ') + ') in: ' + [...where.keys()].join(', ') + '. Sul PA-500 queste liste compaiono solo con la licenza Threat Prevention attiva e dopo aver installato Applications and Threats e poi Antivirus (Device > Dynamic Updates): prima il commit fallisce con «is not a valid reference». Installa i contenuti prima del caricamento invece di togliere le regole: con la regola si perde anche il blocco sugli altri oggetti che contiene.', { xpath: [...where.values()].join(' | ') });
+  }
+
   // ------------------------------------------------------------------ regola: adeguamento alla 12.1
   /** Versione della sorgente da detail-version (o version) come [maggiore, minore, patch]. */
   function sourceVersion(doc) {
@@ -1525,6 +1596,11 @@
   }
   function decryptionProfiles(doc) {
     return Array.from(doc.documentElement.getElementsByTagName('decryption'))
+      .filter(c => c.parentNode && c.parentNode.tagName === 'profiles')
+      .flatMap(c => kids(c, 'entry'));
+  }
+  function urlFilteringProfiles(doc) {
+    return Array.from(doc.documentElement.getElementsByTagName('url-filtering'))
       .filter(c => c.parentNode && c.parentNode.tagName === 'profiles')
       .flatMap(c => kids(c, 'entry'));
   }
@@ -1576,6 +1652,19 @@
     if (olderThan(v, 12, 1, 0)) {
       const fwd = decryptionProfiles(doc).filter(e => kid(e, 'ssl-forward-proxy') && ['', 'max', 'tls1-3'].includes(txt(e, 'ssl-protocol-settings/max-version') || ''));
       if (fwd.length) R.add('check', area, 'Decryption profile con SSL Forward Proxy e TLS 1.3 (' + fwd.map(e => '`' + nameOf(e) + '`').join(', ') + '): dalla 12.1 TLS 1.3 si decifra solo con X25519, X448, secp256r1, secp384r1 e secp521r1. Le sessioni verso server che negoziano solo altre curve non si completano; per quei server limita il profilo a TLS 1.2.');
+    }
+
+    // URL Filtering: l'Inline ML della 10.1 dalla 10.2 è la Inline Categorization, con altri elementi
+    const mlav = urlFilteringProfiles(doc).filter(e => kid(e, 'mlav-engine-urlbased-enabled'));
+    if (mlav.length) {
+      const active = [];
+      for (const e of mlav) {
+        const el = kid(e, 'mlav-engine-urlbased-enabled');
+        if (kids(el, 'entry').some(m => (txt(m, 'mlav-policy-action') || 'allow') !== 'allow')) active.push('`' + nameOf(e) + '`');
+        detach(el);
+      }
+      R.add('done', area, 'URL Filtering profile con l\'Inline ML della 10.1 (' + mlav.map(e => '`' + nameOf(e) + '`').join(', ') + '): tolto `mlav-engine-urlbased-enabled`, che dalla 10.2 non esiste più. Al suo posto c\'è la Inline Categorization (`local-inline-cat`, `cloud-inline-cat`), che PAN-OS aggiunge con i suoi default.');
+      if (active.length) R.add('check', area, 'In ' + active.join(', ') + ' l\'Inline ML era attiva (azione diversa da allow): per mantenere la protezione verifica la Inline Categorization nel profilo. Quella cloud richiede Advanced URL Filtering, quella locale una licenza URL Filtering legacy.');
     }
 
     // Authentication sequence: comportamento cambiato nella 11.1.1
@@ -1765,6 +1854,7 @@
   function errorHint(msg, tag) {
     const m = (msg || '').toLowerCase();
     if (m.includes('advanced routing')) return 'Il PA-500 non accetta advance-routing = no: carica la config convertita da questa pagina, dove la regola Advanced Routing lo imposta a yes.';
+    if (/'panw-[a-z0-9-]+-list' is not a valid reference/.test(m)) return 'EDL predefinita di Palo Alto: compare solo con la licenza Threat Prevention e dopo aver installato Applications and Threats e Antivirus (Device > Dynamic Updates). Installa i contenuti e ripeti il commit invece di togliere la regola.';
     if (m.includes('is unexpected')) return 'Elemento che questa versione o questa piattaforma non accetta: di solito si rimuove.';
     if (m.includes('not a valid reference')) return 'Riferimento a un oggetto che non esiste nella config: rimuovi il riferimento oppure crea l\'oggetto.';
     if (m.includes('not an allowed keyword') || m.includes('is invalid')) return 'Valore non accettato: correggilo con una regola «imposta valore» o rimuovi l\'elemento.';
@@ -1779,6 +1869,7 @@
     const t0 = Date.now();
     const R = new Report();
     const doc = srcDoc.cloneNode(true);
+    candidateMarkers(doc, R);
     const model = getModel(opts.model, opts.customPorts);
     const devs = all(doc.documentElement, 'devices/entry');
     const tdevs = tgtDoc ? all(tgtDoc.documentElement, 'devices/entry') : [];
@@ -1812,9 +1903,13 @@
       }
     }
     if (tgtDoc && opts.rules.keepAdmins && ctxs.length) ruleKeepAdmins(ctxs[0]);
+    else if (ctxs.length) ruleSystemAccounts(ctxs[0]);
+    // i nodi presi dalla config del PA-500 possono portare gli stessi marcatori
+    if (tgtDoc) candidateMarkers(doc, null);
     const ruleHits = applyCustomRules(doc, opts.customRules, R);
     for (const ctx of ctxs) if (opts.rules.ha) haChecks(ctx);
     secretsCheck(doc, R);
+    predefinedEdlCheck(doc, R);
     if (ctxs.length) finalScan(ctxs[0]);
 
     // stato delle porte per il pannello
@@ -1858,7 +1953,9 @@
         'load config partial mode replace from-xpath ' + base + '/vsys to-xpath /config/' + base + '/vsys from ' + f,
         'set deviceconfig setting advance-routing yes',
         'validate full'
-      ].join('\n')
+      ].join('\n'),
+      // residuo di caricamenti parziali dalla config originale: con l'ARE non si usa
+      cleanup: ['configure', 'show network virtual-router', 'delete network virtual-router', 'validate full'].join('\n')
     };
   }
 

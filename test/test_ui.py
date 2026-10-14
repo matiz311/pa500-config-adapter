@@ -77,6 +77,8 @@ with sync_playwright() as p:
         page.click(f'#tab-{tab}')
         page.wait_for_timeout(150)
         page.screenshot(path=str(SHOTS / f'03-tab-{tab}.png'))
+        if tab == 'load' and 'delete network virtual-router' not in page.inner_text('.steps-load'):
+            problems.append('scheda Caricamento: manca la pulizia del virtual router legacy')
     page.screenshot(path=str(SHOTS / '04-completa.png'), full_page=True)
 
     # 6) download

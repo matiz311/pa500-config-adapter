@@ -57,6 +57,7 @@ python3 test/test_ha.py
 python3 test/test_riferimento_are.py
 python3 test/test_versioni.py
 python3 test/test_migrazione_102.py
+python3 test/test_migrazione_101.py
 python3 test/test_schema_migrazione.py
 python3 test/test_anonimizza.py
 python3 test/test_ui.py
