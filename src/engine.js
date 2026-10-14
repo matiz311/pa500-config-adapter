@@ -1040,6 +1040,43 @@
     for (let n = el.parentNode; n && n.nodeType === 1; n = n.parentNode) if (n.tagName === 'network' && n.parentNode && n.parentNode.tagName === 'entry') return true;
     return false;
   }
+  function tagPath(el) {
+    const tags = [];
+    for (let n = el; n && n.nodeType === 1; n = n.parentNode) tags.push(n.tagName);
+    return tags.reverse().join('/');
+  }
+  function isInterfaceNameRef(el) {
+    if (!el || el.tagName !== 'entry') return false;
+    const p = tagPath(el);
+    if (/\/network\/interface\/(?:ethernet|aggregate-ethernet)\/entry$/.test(p)) return true;
+    if (/\/network\/interface\/(?:ethernet|aggregate-ethernet)\/entry\/(?:layer2|layer3)\/units\/entry$/.test(p)) return true;
+    if (/\/network\/interface\/(?:loopback|tunnel|vlan)\/units\/entry$/.test(p)) return true;
+    const par = el.parentNode;
+    return !!(par && par.tagName === 'interface' && underNetwork(el));
+  }
+  function isInterfaceTextRef(el) {
+    if (!el || el.firstElementChild) return false;
+    const p = tagPath(el);
+    const tag = el.tagName;
+    if (tag === 'member') {
+      const par = el.parentNode;
+      if (par && par.tagName === 'interface') {
+        if (underNetwork(el) || /\/deviceconfig\/high-availability\//.test(p)) return true;
+        if (/\/vsys\/entry\/import\/network\/interface\/member$/.test(p)) return true;
+        if (/\/vsys\/entry\/rulebase\/pbf\/rules\/entry\/from\/interface\/member$/.test(p)) return true;
+      }
+      if (/\/vsys\/entry\/zone\/entry\/network\/(?:layer3|layer2|tap|virtual-wire)\/member$/.test(p)) return true;
+      return false;
+    }
+    if (tag === 'aggregate-group' && underInterfaceTree(el)) return true;
+    if (isHaPort(el)) return true;
+    if (['interface', 'tunnel-interface', 'remote-user-tunnel', 'to-interface', 'egress-interface', 'interface1', 'interface2'].includes(tag)) {
+      if (underNetwork(el)) return true;
+      if (/\/deviceconfig\/system\/route\/service\//.test(p)) return true;
+      if (/\/vsys\/entry\/(?:global-protect|rulebase\/(?:nat|pbf))\//.test(p)) return true;
+    }
+    return false;
+  }
 
   function ruleInterfaces(ctx) {
     const { dev, doc, R, opts, model } = ctx;
