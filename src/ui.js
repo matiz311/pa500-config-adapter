@@ -151,6 +151,23 @@
       );
     }
     $('#s1').classList.toggle('is-done', !!(S.src && S.src.doc));
+    renderLeds();
+  }
+
+  /** Spie della testata: file caricati ed esito della conversione. */
+  function renderLeds() {
+    const slotLed = st => (!st ? null : st.error ? ['err', 'file non leggibile'] : ['ok', 'caricata']);
+    const R = S.result;
+    const out = !R ? null
+      : R.fatal || R.stats.error ? ['err', R.fatal ? 'conversione interrotta' : R.stats.error + (R.stats.error === 1 ? ' errore' : ' errori')]
+      : R.stats.manual ? ['warn', R.stats.manual + ' attività da fare a mano']
+      : ['ok', 'nessun errore noto'];
+    const states = { src: slotLed(S.src), tgt: slotLed(S.tgt), out };
+    for (const li of document.querySelectorAll('#leds li')) {
+      const s = states[li.dataset.led];
+      if (s) li.dataset.on = s[0]; else delete li.dataset.on;
+      $('[data-state]', li).textContent = ': ' + (s ? s[1] : li.dataset.led === 'out' ? 'nessuno' : 'non caricata');
+    }
   }
 
   // ------------------------------------------------------------------ modello e pannello
@@ -533,6 +550,7 @@
     const body = $('#r-body');
     const meta = $('#r-meta');
     const R = S.result;
+    renderLeds();
     if (!R) {
       meta.textContent = '';
       body.replaceChildren(h('p', { class: 'empty' }, 'Carica la config sorgente: qui compaiono il report della conversione e il file da scaricare.'));

@@ -36,6 +36,8 @@ with sync_playwright() as p:
     page.set_input_files('input[data-file=src]', str(tgz))
     page.wait_for_timeout(500)
     print('slot src:', page.inner_text('#drop-src .slot-body').replace('\n', ' | '))
+    if page.get_attribute('#leds li[data-led=src]', 'data-on') != 'ok' or page.get_attribute('#leds li[data-led=out]', 'data-on') is None:
+        problems.append('spie della testata non aggiornate dopo il caricamento della sorgente')
     page.screenshot(path=str(SHOTS / '01-sorgente.png'), full_page=True)
     print('summary:', page.inner_text('#map-summary'))
     print('verdict:', page.inner_text('.verdict'))
