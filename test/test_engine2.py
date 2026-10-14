@@ -36,7 +36,7 @@ IFACE_SRC = """<config version="11.1.0">
 </entry></vsys></entry></devices></config>"""
 
 JS = """
-([src, are]) => {
+([src, are, iface]) => {
   const out = {};
   const run = (xml, opts) => PA500.run(PA500.parse(xml), Object.assign({ model: 'PA-550', map: {}, customRules: [],
       rules: { are: true, dyn: true, ifaces: true, ha: true, poe: true, keepMgmt: false, keepHA: false, keepAdmins: false } }, opts), null);
@@ -91,6 +91,45 @@ JS = """
     zoneUntrust: PA500.evalXPath(r5.doc, "//zone/entry[@name='untrust']/network/layer3/member")[0].textContent,
     unit: PA500.evalXPath(r5.doc, "//ethernet/entry[@name='ethernet1/1']/layer3/units/entry/@name").map(a => a.value),
     dhcp: PA500.evalXPath(r5.doc, "//dhcp/interface/entry/@name").map(a => a.value) };
+
+  // 5. riferimenti tipizzati: oggetti/testo omonimi devono restare intatti
+  const ifRules = { are: false, dyn: false, ifaces: true, ha: false, poe: false, keepMgmt: false, keepHA: false, keepAdmins: false };
+  const val = (doc, xp) => PA500.evalXPath(doc, xp).map(n => n.value !== undefined ? n.value : n.textContent.trim());
+  const r6 = run(iface, { map: { 'ethernet1/1': 'ethernet1/3' }, rules: ifRules });
+  const r7 = run(iface, { map: { 'ethernet1/1': '__drop__' }, rules: ifRules });
+  out.typedRename = {
+    iface: val(r6.doc, "//network/interface/ethernet/entry/@name"),
+    unit: val(r6.doc, "//network/interface/ethernet/entry/layer3/units/entry/@name"),
+    dhcp: val(r6.doc, "//dhcp/interface/entry/@name"),
+    vr: val(r6.doc, "//virtual-router/entry/interface/member"),
+    ospf: val(r6.doc, "//protocol/ospf/area/entry/interface/entry/@name"),
+    route: val(r6.doc, "//static-route/entry/interface"),
+    ike: val(r6.doc, "//ike/gateway/entry/local-address/interface"),
+    zone: val(r6.doc, "//zone/entry/network/layer3/member"),
+    imp: val(r6.doc, "//vsys/entry/import/network/interface/member"),
+    object: PA500.evalXPath(r6.doc, "//shared/address/entry[@name='ethernet1/1']").length,
+    group: val(r6.doc, "//shared/address-group/entry/static/member"),
+    policy: val(r6.doc, "//rulebase/security/rules/entry/destination/member"),
+    description: val(r6.doc, "//rulebase/security/rules/entry/description"),
+    comment: val(r6.doc, "//network/interface/ethernet/entry[@name='ethernet1/3']/comment"),
+    checks: r6.report.filter(i => i.area === 'Interfacce' && i.level === 'check').length
+  };
+  out.typedDrop = {
+    iface: val(r7.doc, "//network/interface/ethernet/entry/@name"),
+    dhcp: val(r7.doc, "//dhcp/interface/entry/@name"),
+    vr: val(r7.doc, "//virtual-router/entry/interface/member"),
+    ospf: val(r7.doc, "//protocol/ospf/area/entry/interface/entry/@name"),
+    route: val(r7.doc, "//static-route/entry/interface"),
+    ike: val(r7.doc, "//ike/gateway/entry/local-address/interface"),
+    zone: val(r7.doc, "//zone/entry/network/layer3/member"),
+    imp: val(r7.doc, "//vsys/entry/import/network/interface/member"),
+    object: PA500.evalXPath(r7.doc, "//shared/address/entry[@name='ethernet1/1']").length,
+    group: val(r7.doc, "//shared/address-group/entry/static/member"),
+    policy: val(r7.doc, "//rulebase/security/rules/entry/destination/member"),
+    description: val(r7.doc, "//rulebase/security/rules/entry/description"),
+    errors: r7.report.filter(i => i.area === 'Interfacce' && i.level === 'error').map(i => i.msg),
+    checks: r7.report.filter(i => i.area === 'Interfacce' && i.level === 'check').length
+  };
   return out;
 }
 """
@@ -107,7 +146,7 @@ with sync_playwright() as p:
     page = b.new_page()
     page.set_content('<html><body></body></html>')
     page.add_script_tag(content=ENGINE)
-    r = page.evaluate(JS, [SRC, ARE_SRC])
+    r = page.evaluate(JS, [SRC, ARE_SRC, IFACE_SRC])
     b.close()
 
 # 1. regole personalizzate
