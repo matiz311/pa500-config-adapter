@@ -37,9 +37,9 @@ Policy BGP, route map e filtri complessi, OSPFv3, RIP e multicast non vengono co
 
 ## Limiti noti
 
-- La struttura ARE generata (logical router, static route, path group HA) coincide con quella di un PA-550 in produzione con PAN-OS 12.1.7, riprodotta in forma sintetica in `test/pa550-are-funzionante.xml`. La conversione completa da una config legacy non è ancora stata caricata su un PA-500 (issue #8): lancia sempre `validate full` prima del commit.
+- La struttura ARE generata (logical router, static route, path group HA) coincide con quella di un PA-550 in produzione con PAN-OS 12.1.7, riprodotta in forma sintetica in `test/pa550-are-funzionante.xml`. Il confronto 10.2.16 → 12.1 con una migrazione reale è riprodotto con dati sintetici in `test/test_migrazione_102.py`; prima del commit sul firewall resta comunque obbligatorio eseguire `validate full`.
 - La numerazione `ethernet1/N` delle porte è dedotta dalla posizione sul pannello frontale descritta nella PA-500 Hardware Reference. Verificala con `show interface all`.
-- L'admin distance OSPF interna viene impostata a 30 come nel motore legacy (il default ARE è 110). Il report lo segnala.
+- L'admin distance OSPF interna al default legacy 30 non viene portata: nell'ARE/PAN-OS 12.x resta il default 110. Con OSPF attivo il report segnala il cambio e richiede di verificare la preferenza delle route; eventuali valori espliciti non-default vengono preservati.
 - I limiti di capacità dei modelli (zone, regole, tunnel) non sono pubblicati in forma verificabile: la scheda «Conteggi» li fa inserire a mano.
 
 ## Chi ci lavora

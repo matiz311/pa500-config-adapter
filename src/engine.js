@@ -542,15 +542,19 @@
     const proto = kid(vr, 'protocol');
     const ospfOn = txt(proto, 'ospf/enable') === 'yes';
     const ospf3On = txt(proto, 'ospfv3/enable') === 'yes';
-    // l'export legacy scrive le admin distance anche quando sono ai default: la distanza OSPF interna
-    // al default legacy (30) con il protocollo spento non va portata, nell'ARE vale il default 110
+    // L'export legacy scrive le admin distance anche quando sono ai default. Per OSPF
+    // il default interno passa da 30 (legacy) a 110 (ARE/PAN-OS 12.x): il 30 di default
+    // non viene portato, anche con OSPF attivo. I valori espliciti non-default restano invariati.
     const idle = [];
-    if (!ospfOn && adSet['ospf-intra'] === '30') { delete adSet['ospf-intra']; delete adSet['ospf-inter']; idle.push('OSPF'); }
+    if (adSet['ospf-intra'] === '30') {
+      delete adSet['ospf-intra']; delete adSet['ospf-inter'];
+      if (ospfOn) R.add('check', 'OSPF', '`' + name + '`: admin distance OSPF interna 30 del motore legacy non portata; nell\'ARE/PAN-OS 12.x resta il default 110. Verifica la preferenza delle route dopo la migrazione.');
+      else idle.push('OSPF');
+    }
     if (!ospf3On && adSet['ospfv3-intra'] === '30') { delete adSet['ospfv3-intra']; delete adSet['ospfv3-inter']; idle.push('OSPFv3'); }
     if (idle.length) R.add('info', area, '`' + name + '`: ' + idle.join(' e ') + ' disattivato: la distanza interna resta al default ARE (110) invece del 30 legacy, come nei logical router creati da PAN-OS.');
     if (ospfOn && !(ad && kid(ad, 'ospf-int'))) {
-      adSet['ospf-intra'] = '30'; adSet['ospf-inter'] = '30';
-      R.add('check', 'OSPF', '`' + name + '`: impostata admin distance OSPF interna a 30 come nel motore legacy (nell\'ARE il valore predefinito è 110). Toglila se vuoi i default ARE.');
+      R.add('check', 'OSPF', '`' + name + '`: OSPF attivo senza admin distance interna esplicita: nell\'ARE/PAN-OS 12.x vale il default 110 (nel legacy era 30). Verifica la preferenza delle route dopo la migrazione.');
     }
     if (ospf3On && !(ad && kid(ad, 'ospfv3-int'))) {
       adSet['ospfv3-intra'] = '30'; adSet['ospfv3-inter'] = '30';

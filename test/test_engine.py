@@ -108,6 +108,11 @@ with sync_playwright() as p:
         root = ET.fromstring(r['xml'])
         assert root.find('.//virtual-router') is None or name == 'solo_are_senza_dyn' and False, 'virtual-router residuo'
         assert root.findtext('./devices/entry/deviceconfig/setting/advance-routing') == 'yes'
+        if sc['rules']['dyn']:
+            ospf_ad = root.find("./devices/entry/network/logical-router/entry[@name='default']/vrf/entry[@name='default']/admin-dists")
+            assert ospf_ad is not None, 'admin-dists del logical router default mancanti'
+            assert ospf_ad.find('ospf-intra') is None and ospf_ad.find('ospf-inter') is None, 'il default legacy OSPF 30 non deve essere portato nell ARE'
+            assert any(it['level'] == 'check' and it['area'] == 'OSPF' and 'default 110' in it['msg'] for it in r['report']), 'manca avviso sul cambio del default OSPF 30 -> 110'
         print('porte:', json.dumps(r['ports']))
     b.close()
     print('schema failures:', failures)
