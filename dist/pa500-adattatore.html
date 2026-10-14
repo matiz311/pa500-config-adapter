@@ -2083,6 +2083,33 @@ pre.code {
     R.add('check', 'Piattaforma', 'La config contiene ' + n + ' valori cifrati con la master key del firewall sorgente (' + list + '). Se la sorgente usa una master key personalizzata, impostala uguale sul PA-500 (Device > Master Key and Diagnostics) prima del caricamento, altrimenti chiavi private, PSK e password non si decifrano e il commit fallisce.');
   }
 
+  /**
+   * EDL predefinite di Palo Alto (`panw-*`): arrivano con i contenuti dinamici, quindi su un PA-500
+   * appena inizializzato non esistono e ogni riferimento fa fallire il commit.
+   */
+  const PANW_EDL = /^panw-[a-z0-9-]+-list$/;
+  function predefinedEdlCheck(doc, R) {
+    const defined = new Set(Array.from(doc.documentElement.getElementsByTagName('external-list')).flatMap(c => kids(c, 'entry')).map(nameOf));
+    const where = new Map();
+    const names = new Set();
+    const els = doc.documentElement.getElementsByTagName('*');
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      if (el.firstElementChild) continue;
+      const v = el.textContent.trim();
+      if (!PANW_EDL.test(v) || defined.has(v)) continue;
+      names.add(v);
+      let rule = el.parentNode;
+      while (rule && rule.nodeType === 1 && !(rule.tagName === 'entry' && rule.parentNode && rule.parentNode.tagName === 'rules')) rule = rule.parentNode;
+      const label = rule && rule.nodeType === 1
+        ? rule.parentNode.parentNode.tagName + ' `' + nameOf(rule) + '`'
+        : humanPath(el.parentNode);
+      if (!where.has(label)) where.set(label, xpathOf(rule && rule.nodeType === 1 ? rule : el));
+    }
+    if (!names.size) return;
+    R.add('check', 'Piattaforma', 'Riferimenti alle EDL predefinite di Palo Alto (' + [...names].sort().map(n => '`' + n + '`').join(', ') + ') in: ' + [...where.keys()].join(', ') + '. Sul PA-500 queste liste compaiono solo con la licenza Threat Prevention attiva e dopo aver installato Applications and Threats e poi Antivirus (Device > Dynamic Updates): prima il commit fallisce con «is not a valid reference». Installa i contenuti prima del caricamento invece di togliere le regole: con la regola si perde anche il blocco sugli altri oggetti che contiene.', { xpath: [...where.values()].join(' | ') });
+  }
+
   // ------------------------------------------------------------------ regola: adeguamento alla 12.1
   /** Versione della sorgente da detail-version (o version) come [maggiore, minore, patch]. */
   function sourceVersion(doc) {
@@ -2104,6 +2131,11 @@ pre.code {
   }
   function decryptionProfiles(doc) {
     return Array.from(doc.documentElement.getElementsByTagName('decryption'))
+      .filter(c => c.parentNode && c.parentNode.tagName === 'profiles')
+      .flatMap(c => kids(c, 'entry'));
+  }
+  function urlFilteringProfiles(doc) {
+    return Array.from(doc.documentElement.getElementsByTagName('url-filtering'))
       .filter(c => c.parentNode && c.parentNode.tagName === 'profiles')
       .flatMap(c => kids(c, 'entry'));
   }
@@ -2155,6 +2187,19 @@ pre.code {
     if (olderThan(v, 12, 1, 0)) {
       const fwd = decryptionProfiles(doc).filter(e => kid(e, 'ssl-forward-proxy') && ['', 'max', 'tls1-3'].includes(txt(e, 'ssl-protocol-settings/max-version') || ''));
       if (fwd.length) R.add('check', area, 'Decryption profile con SSL Forward Proxy e TLS 1.3 (' + fwd.map(e => '`' + nameOf(e) + '`').join(', ') + '): dalla 12.1 TLS 1.3 si decifra solo con X25519, X448, secp256r1, secp384r1 e secp521r1. Le sessioni verso server che negoziano solo altre curve non si completano; per quei server limita il profilo a TLS 1.2.');
+    }
+
+    // URL Filtering: l'Inline ML della 10.1 dalla 10.2 è la Inline Categorization, con altri elementi
+    const mlav = urlFilteringProfiles(doc).filter(e => kid(e, 'mlav-engine-urlbased-enabled'));
+    if (mlav.length) {
+      const active = [];
+      for (const e of mlav) {
+        const el = kid(e, 'mlav-engine-urlbased-enabled');
+        if (kids(el, 'entry').some(m => (txt(m, 'mlav-policy-action') || 'allow') !== 'allow')) active.push('`' + nameOf(e) + '`');
+        detach(el);
+      }
+      R.add('done', area, 'URL Filtering profile con l\'Inline ML della 10.1 (' + mlav.map(e => '`' + nameOf(e) + '`').join(', ') + '): tolto `mlav-engine-urlbased-enabled`, che dalla 10.2 non esiste più. Al suo posto c\'è la Inline Categorization (`local-inline-cat`, `cloud-inline-cat`), che PAN-OS aggiunge con i suoi default.');
+      if (active.length) R.add('check', area, 'In ' + active.join(', ') + ' l\'Inline ML era attiva (azione diversa da allow): per mantenere la protezione verifica la Inline Categorization nel profilo. Quella cloud richiede Advanced URL Filtering, quella locale una licenza URL Filtering legacy.');
     }
 
     // Authentication sequence: comportamento cambiato nella 11.1.1
@@ -2344,6 +2389,7 @@ pre.code {
   function errorHint(msg, tag) {
     const m = (msg || '').toLowerCase();
     if (m.includes('advanced routing')) return 'Il PA-500 non accetta advance-routing = no: carica la config convertita da questa pagina, dove la regola Advanced Routing lo imposta a yes.';
+    if (/'panw-[a-z0-9-]+-list' is not a valid reference/.test(m)) return 'EDL predefinita di Palo Alto: compare solo con la licenza Threat Prevention e dopo aver installato Applications and Threats e Antivirus (Device > Dynamic Updates). Installa i contenuti e ripeti il commit invece di togliere la regola.';
     if (m.includes('is unexpected')) return 'Elemento che questa versione o questa piattaforma non accetta: di solito si rimuove.';
     if (m.includes('not a valid reference')) return 'Riferimento a un oggetto che non esiste nella config: rimuovi il riferimento oppure crea l\'oggetto.';
     if (m.includes('not an allowed keyword') || m.includes('is invalid')) return 'Valore non accettato: correggilo con una regola «imposta valore» o rimuovi l\'elemento.';
@@ -2394,6 +2440,7 @@ pre.code {
     const ruleHits = applyCustomRules(doc, opts.customRules, R);
     for (const ctx of ctxs) if (opts.rules.ha) haChecks(ctx);
     secretsCheck(doc, R);
+    predefinedEdlCheck(doc, R);
     if (ctxs.length) finalScan(ctxs[0]);
 
     // stato delle porte per il pannello
