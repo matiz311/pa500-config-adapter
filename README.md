@@ -12,7 +12,7 @@ Sui PA-500 l'Advanced Routing non si può disattivare. Se importi la config o il
 
 ## Uso
 
-1. Scarica [`dist/pa500-adattatore.html`](dist/pa500-adattatore.html) e aprila con Chrome, Edge o Firefox.
+1. Apri la pagina pubblicata su GitHub Pages, <https://matiz311.github.io/pa500-config-adapter/>, oppure scarica [`dist/pa500-adattatore.html`](dist/pa500-adattatore.html) e aprila con Chrome, Edge o Firefox.
 2. Carica il `running-config.xml` del firewall attuale, oppure direttamente il suo device state (`.tgz`). Se carichi anche l'export del PA-500, la pagina mantiene management, hostname, HA e amministratori del nuovo firewall.
 3. Scegli il modello e assegna le porte: dalla tabella, oppure selezionando un'interfaccia e cliccando la porta sul pannello frontale.
 4. Scegli le regole e scarica la config convertita e il report.
@@ -20,6 +20,13 @@ Sui PA-500 l'Advanced Routing non si può disattivare. Se importi la config o il
 6. Se validate restituisce errori, incollali al passo 4 della pagina: per ognuno trova l'elemento nella config convertita e propone una correzione, che diventa una regola XPath riutilizzabile.
 
 Le regole personalizzate restano salvate nel browser e si possono esportare e importare in JSON.
+
+### Pubblicazione su GitHub Pages
+
+`.github/workflows/pages.yml` pubblica `dist/pa500-adattatore.html` come `index.html` ogni volta che i test passano su `main`; si può lanciare anche a mano (Actions > Pubblicazione su GitHub Pages > Run workflow). Per attivarla: Settings > Pages > Source «GitHub Actions». Finché Pages non è attivo il workflow si ferma con un avviso.
+
+- Il sito è pubblico anche se il repository è privato (Pages privato solo con GitHub Enterprise Cloud), e da un repository privato Pages richiede GitHub Pro. Nella pagina non ci sono dati reali: solo il codice dello strumento.
+- La config non lascia mai il browser: la pagina dichiara una Content-Security-Policy con `connect-src 'none'`, quindi il browser blocca qualunque richiesta in uscita. `test/test_ui.py` lo verifica.
 
 ## Cosa converte
 
