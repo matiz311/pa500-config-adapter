@@ -42,6 +42,7 @@ git log --format='%h %ad %<(9)%(trailers:key=Agente,valueonly,separator=%x2C) %s
 ## Dati sensibili
 
 - Mai committare config reali di firewall: contengono chiavi private, hash delle password, PSK e indirizzi dei clienti. Nel repository vanno solo config sintetiche (`test/*.xml`), con indirizzi di documentazione (RFC 5737) o privati.
+- Una config reale si può usare come schema solo dopo averla passata in `tools/anonimizza.py`. Lo strumento tiene le sole sezioni utili alla migrazione, sostituisce nomi, indirizzi (pubblici in RFC 6598, privati rimappati) e testi, e rifiuta di scrivere se nei file prodotti resta una parola o un indirizzo pubblico degli originali. Rileggi comunque l'output prima del commit. Gli schemi stanno in `test/schema/`.
 - Nelle issue e nei commenti niente nomi di clienti, hostname, IP pubblici o estratti di config reali: descrivi la struttura, non i dati.
 
 ## Prima di ogni push
@@ -56,6 +57,8 @@ python3 test/test_ha.py
 python3 test/test_riferimento_are.py
 python3 test/test_versioni.py
 python3 test/test_migrazione_102.py
+python3 test/test_schema_migrazione.py
+python3 test/test_anonimizza.py
 python3 test/test_ui.py
 ```
 

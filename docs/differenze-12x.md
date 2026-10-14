@@ -68,6 +68,18 @@ Lo strumento, applicato al backup 10.2.16, produce lo stesso logical router, a p
 
 È il tipo di perdita che la mappatura delle porte dello strumento evita, rinominando le interfacce in tutta la config invece di scartarne i riferimenti.
 
+### Schema nel repository
+
+La coppia di config di questa migrazione è in `test/schema/` in forma anonima: `prima-10.2.xml` (10.2.16, virtual router legacy) e `dopo-12.1.xml` (12.1.7, Advanced Routing). Sono prodotte da `tools/anonimizza.py`, che conserva struttura, nomi delle interfacce, numeri e valori degli schemi e sostituisce in modo coerente nomi degli oggetti, indirizzi e testi. Contengono solo le sezioni utili alla migrazione: rete, routing, IKE e IPsec, HA, zone, regole, oggetti, profili SSL/TLS e di decryption, GlobalProtect.
+
+`test/test_schema_migrazione.py` converte `prima-10.2.xml` e controlla che il risultato coincida con `dopo-12.1.xml` dove conta la migrazione:
+- stesse route, con lo stesso next hop, la stessa metrica e la rinomina del nome con lo spazio;
+- `ikev1` sui gateway che non indicavano la versione;
+- nessuna distanza OSPF legacy;
+- nessun errore e nessuna attività manuale.
+
+Controlla anche che `dopo-12.1.xml` passi invariata. I cambi di infrastruttura e le modifiche fatte a mano dopo la migrazione sono esclusi dal confronto.
+
 ## Novità che una config vecchia non ha
 
 Confrontando l'export 12.1.7 con gli schemi di pan-os-codegen (allineati alla 11.0) risultano nuovi, e quindi assenti nelle config precedenti, senza bisogno di conversione: IKEv2 post-quantum (`pq-kem`, `pq-ppk`, `pq-qkd`) e `ikev2-fragment`; `encrypted-dns` nel DNS proxy; `gp-gw-dhcp` nel gateway GlobalProtect; `use-default-browser` nel portale; `tls1-3` e `enc-algo-aes-chacha20-poly1305` nei profili SSL/TLS; `ipv6-enable` nelle impostazioni SD-WAN delle aggregate.

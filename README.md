@@ -54,6 +54,8 @@ src/ui.js          interfaccia della pagina
 src/style.css      stili
 src/template.html  scheletro della pagina
 build.py           assembla dist/pa500-adattatore.html
+tools/anonimizza.py  rende anonime config reali da usare come schema di migrazione
+test/schema/       schema anonimo di una migrazione reale (prima 10.2, dopo 12.1)
 test/              test in Chromium headless e config di prova sintetiche
 ```
 
@@ -69,6 +71,8 @@ python3 test/test_ha.py               # link HA: porte condivise, management, ba
 python3 test/test_riferimento_are.py   # una config con la struttura di un PA-550 in produzione resta invariata
 python3 test/test_versioni.py         # adeguamento alla 12.1 in base alla versione della sorgente
 python3 test/test_migrazione_102.py   # migrazione reale 10.2.16 → 12.1 riprodotta con dati sintetici
+python3 test/test_schema_migrazione.py # schema anonimo di una migrazione reale: prima 10.2, dopo 12.1
+python3 test/test_anonimizza.py       # strumento di anonimizzazione
 python3 test/test_ui.py               # percorso completo nella pagina, mobile e tema scuro
 python3 test/perf.py                  # tempi su una config sintetica da circa 6 MB
 ```
